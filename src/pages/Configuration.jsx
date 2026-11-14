@@ -2,61 +2,19 @@ import Page from "../components/Page.jsx";
 import Paragraph from "../components/Paragraph.jsx";
 import Subheading from "../components/Subheading.jsx";
 import useSettings from "../hooks/useSettings.js";
-
-const additionalRooms = [
-  {
-    level: 4,
-    rooms: ["Geld Family Residence", "Geld Family Logistics"],
-  },
-  {
-    level: 8,
-    rooms: ["Dilapidated Warehouse", "Slant Street Cart House"],
-  },
-  {
-    level: 18,
-    rooms: ["Oscen's Warehouse", "Market Chambers"],
-  },
-  {
-    level: 51,
-    rooms: ["Four Winds Back Room", "Four Winds Side Room"],
-  },
-  {
-    level: 83,
-    rooms: ["Gillad's House", "The Quill Club"],
-  },
-  // {
-  //   level: 121,
-  //   rooms: ["Geld Family Residence", "Geld Family Logistics"],
-  // },
-  // {
-  //   level: 168,
-  //   rooms: ["Dilapidated Warehouse", "Slant Street Cart House"],
-  // },
-  // {
-  //   level: 219,
-  //   rooms: ["Oscen's Warehouse", "Market Chambers"],
-  // },
-  // {
-  //   level: 344,
-  //   rooms: ["Four Winds Side Room", "Four Winds Back Room"],
-  //   infoNeeded: true,
-  // },
-  // {
-  //   level: 451,
-  //   rooms: ["Gillad's House", "The Quill Club"],
-  //   infoNeeded: true,
-  // },
-];
+import { cityShortcuts } from "../algorithm/nodes.js";
 
 const Configuration = () => {
   const {
     merchantingMilestone,
     merchantingLevel,
+    detectiveMilestone,
     detectiveLevel,
     battleOfFortuneholdCompleted,
     roundTrip,
     setMerchantingMilestone,
     setMerchantingLevel,
+    setDetectiveMilestone,
     setDetectiveLevel,
     setBattleOfFortuneholdCompleted,
     setRoundTrip,
@@ -102,33 +60,51 @@ const Configuration = () => {
         </label>
       </div>
 
-      <Subheading>Detective Level</Subheading>
+      <Subheading>Detective Milestone and Level</Subheading>
       <Paragraph>
-        Higher detective levels allow for shorter routes by unlocking rooms. If
-        you leave this blank, the tool will assume you have a detective level of
-        zero. It is <span className="font-bold">highly recommended</span> to set
-        this, or the tool will not take into account any rooms you have
-        unlocked.
+        City Shortcuts are alternate routes through Crenopolis, unlocked one
+        per Detective milestone from milestone 5 onwards. Set your milestone
+        so the tool knows which shortcuts you have unlocked.
       </Paragraph>
 
-      <input
-        value={detectiveLevel}
-        onChange={(e) => setDetectiveLevel(e.target.value)}
-        type="number"
-        min="0"
-        max="500"
-        className="mb-5 block p-2 text-gray-900 dark:text-white border border-gray-300 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800 sm:text-md focus:ring-blue-500 focus:border-blue-500"
-      />
+      <div className="flex gap-3 mb-5">
+        <label className="block">
+          <span className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+            Milestone
+          </span>
+          <input
+            value={detectiveMilestone}
+            onChange={(e) => setDetectiveMilestone(e.target.value)}
+            type="number"
+            min="0"
+            max="9"
+            className="block p-2 text-gray-900 dark:text-white border border-gray-300 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800 sm:text-md focus:ring-blue-500 focus:border-blue-500"
+          />
+        </label>
+        <label className="block">
+          <span className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+            Level
+          </span>
+          <input
+            value={detectiveLevel}
+            onChange={(e) => setDetectiveLevel(e.target.value)}
+            type="number"
+            min="0"
+            max="99"
+            className="block p-2 text-gray-900 dark:text-white border border-gray-300 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800 sm:text-md focus:ring-blue-500 focus:border-blue-500"
+          />
+        </label>
+      </div>
 
       <Paragraph className="mb-5 dark:text-zinc-300">
-        <div className="font-semibold mb-2">Additional room unlocks:</div>
+        <div className="font-semibold mb-2">City Shortcuts unlocked:</div>
         <ul className="list-disc ml-5">
-          {detectiveLevel < 4 && <li className="mb-2">None.</li>}
-          {additionalRooms.map(
-            ({ level, rooms }) =>
-              detectiveLevel >= level && (
-                <li key={level} className="mb-2">
-                  {rooms.join(" and ")}{" "}
+          {detectiveMilestone < 5 && <li className="mb-2">None.</li>}
+          {cityShortcuts.map(
+            ({ milestone, name, rooms }) =>
+              detectiveMilestone >= milestone && (
+                <li key={milestone} className="mb-2">
+                  {name}: {rooms.join(" and ")}{" "}
                 </li>
               ),
           )}

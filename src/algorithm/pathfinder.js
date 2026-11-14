@@ -24,7 +24,7 @@ class Pathfinder {
    * @param availableBounties (Optional) An array of keys from {@link bountyData}
    *   These are the bounties the player has available but not yet accepted on the bounty board
    *   E.g, [CARROTS, SOAP, ...]
-   * @param detectiveLevel Level of players Detective skill, used to determine any additional rooms which can be accessed
+   * @param detectiveMilestone The player's Detective milestone (0-9), used to determine which City Shortcuts can be used
    * @param battleOfFortuneholdCompleted Whether the player has completed the Battle of Fortunehold quest which unlocks an additional room
    * @param roundTrip Whether to return to the bounty board after completing all deliveries
    * @returns {
@@ -36,7 +36,7 @@ class Pathfinder {
   findBestBounties(
     currentBounties,
     availableBounties,
-    detectiveLevel,
+    detectiveMilestone,
     battleOfFortuneholdCompleted,
     roundTrip,
   ) {
@@ -47,7 +47,7 @@ class Pathfinder {
       experience: 0,
     };
 
-    const gps = new GPS(detectiveLevel, battleOfFortuneholdCompleted);
+    const gps = new GPS(detectiveMilestone, battleOfFortuneholdCompleted);
 
     const allBounties = [...currentBounties, ...availableBounties];
     const combos = combinations(allBounties, Math.min(allBounties.length, 6));

@@ -28,8 +28,9 @@ const About = () => {
       </Paragraph>
 
       <Paragraph>
-        Rooms unlocked by quests and den raids are taken into account, so make
-        sure to <InternalLink to="/configuration">configure</InternalLink> your
+        Rooms unlocked by quests and Detective City Shortcuts are taken into
+        account, so make sure to{" "}
+        <InternalLink to="/configuration">configure</InternalLink> your
         settings accordingly.
       </Paragraph>
 
@@ -61,8 +62,8 @@ const About = () => {
         <ul className="list-disc ml-10 mt-2">
           <li className="mb-1">
             The <DiscordChannel>data-needed</DiscordChannel> channel includes
-            specific things we need help with, such as item images or
-            information about den raid rooms.
+            specific things we need help with, such as item images or the node
+            numbers for City Shortcut locations.
           </li>
           <li className="mb-1">
             Post any routes which are faster than what the tool suggests in{" "}

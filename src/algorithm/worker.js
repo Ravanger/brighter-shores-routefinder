@@ -10,7 +10,7 @@ onmessage = (event) => {
   const {
     currentBounties,
     availableBounties,
-    detectiveLevel,
+    detectiveMilestone,
     battleOfFortuneholdCompleted,
     roundTrip,
   } = event.data;
@@ -18,7 +18,7 @@ onmessage = (event) => {
   const result = pathfinder.findBestBounties(
     currentBounties,
     availableBounties,
-    detectiveLevel,
+    detectiveMilestone,
     battleOfFortuneholdCompleted,
     roundTrip,
   );

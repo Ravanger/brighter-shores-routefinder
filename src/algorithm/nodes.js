@@ -151,7 +151,11 @@ export const markets = {
  *
  * `hostile` edges are paths where you may get attacked by mobs.
  *
- * `detective` edges require some level in the Detective skill to travel through.
+ * `detectiveMilestone` edges are City Shortcuts, unlocked at a Detective
+ * milestone (see `cityShortcuts`). An edge is only usable once the player's
+ * Detective milestone reaches the edge's required milestone. City Shortcuts
+ * unlock at the start of a milestone, so only the milestone matters, not the
+ * within-milestone level.
  *
  * `quest` edges are paths that require a quest to be completed to travel through.
  *
@@ -276,7 +280,6 @@ export const edges = [
   { nodes: [28, 33], weight: 4.82 },
   { nodes: [28, 94], weight: 8.39 },
 
-  { nodes: [29, 30], weight: 100, detective: 28 },
   { nodes: [29, 94], weight: 7.5 },
 
   { nodes: [30, 31], weight: 4.77 },
@@ -288,7 +291,6 @@ export const edges = [
   { nodes: [31, 104], weight: 2.44 },
 
   { nodes: [32, 34], weight: 3.71 },
-  { nodes: [32, 33], weight: 4.07, detective: 28 },
   { nodes: [32, 104], weight: 2.2 },
 
   { nodes: [33, 94], weight: 4.27 },
@@ -348,14 +350,12 @@ export const edges = [
   // { nodes: [48, 93] }, Not needed
 
   // { nodes: [49, 52] }, Not needed
-  { nodes: [49, 50], weight: 100, detective: 133 },
 
   // { nodes: [50, 51] }, Not needed
   { nodes: [50, 56], weight: 6.87 },
   { nodes: [50, 59], weight: 4.4 },
   { nodes: [50, 100], weight: 7.12 },
 
-  { nodes: [51, 52], weight: 4.43, detective: 133 },
   { nodes: [51, 56], weight: 6.34 },
   { nodes: [51, 59], weight: 6.3 },
   { nodes: [51, 100], weight: 7.29 },
@@ -394,13 +394,11 @@ export const edges = [
 
   { nodes: [61, 95], weight: 4.6 },
 
-  { nodes: [62, 63], weight: 6.62, detective: 83 },
 
   // { nodes: [63, 65] }, Not needed
   { nodes: [63, 67], weight: 5.06 },
   { nodes: [63, 101], weight: 6.77 },
 
-  { nodes: [64, 65], weight: 100, detective: 83 },
   { nodes: [64, 97], weight: 2.7 },
   { nodes: [64, 99], weight: 6.61 },
 
@@ -518,24 +516,56 @@ export const edges = [
     quest: "BATTLE_OF_FORTUNEHOLD",
   },
 
-  { nodes: [107, 108], weight: 3.19, detective: 183 },
   // { nodes: [107, 109] }, Not needed
   { nodes: [107, 111], weight: 5.34 },
 
   // { nodes: [108, 110] }, Not needed
   { nodes: [108, 112], weight: 4.94 },
 
-  { nodes: [109, 110], weight: 2.57, detective: 183 },
   { nodes: [109, 111], weight: 7.85 },
 
   { nodes: [110, 112], weight: 2.79 },
 
-  { nodes: [113, 114], weight: 2.97, detective: 233 },
   // { nodes: [113, 116] }, Not needed
 
   // { nodes: [114, 115] }, Not needed
   { nodes: [114, 117], weight: 6.49 },
 
-  { nodes: [115, 116], weight: 6.1, detective: 233 },
   { nodes: [115, 117], weight: 5.42 },
+];
+
+/**
+ * City Shortcuts (added to the game 29 September 2026) are Detective
+ * profession interlink rewards: alternate routes through Crenopolis, one
+ * unlocked per Detective milestone from 5 onwards.
+ * Source: https://brightershoreswiki.org/w/City_Shortcut
+ * (the individual variant pages list each shortcut's two locations).
+ *
+ * These are not graph edges yet: no shortcut has both endpoints verified to
+ * a node number in the repo's data, so none can be added to `edges` without
+ * guessing. Candidate endpoint nodes, from shop nodes in `markets` (the shop
+ * sits in the named area); NOT verified — there is no current map to check
+ * them against, so re-verify in-game before wiring an edge:
+ *   Unicorn Farm -> 84 (Cheese Shop), Tanners Road -> 36 (Toy Stall),
+ *   Bert's Gallery -> 57.
+ * The other endpoints (Snag Alley, Sludge Street, Fillan's Living Room,
+ * Dusty Nook, Slant Street, Council Office, The Frog and Barnacle) are
+ * streets, rooms, or buildings with no single node number.
+ * Once both endpoints of a shortcut are verified, add it to `edges` as
+ * `{ nodes: [a, b], weight: <seconds>, detectiveMilestone: <milestone> }`.
+ */
+export const cityShortcuts = [
+  { name: "Cellar", milestone: 5, rooms: ["Unicorn Farm", "Snag Alley"] },
+  { name: "Sewer", milestone: 6, rooms: ["Sludge Street", "Tanners Road"] },
+  {
+    name: "Painting",
+    milestone: 7,
+    rooms: ["Fillan's Living Room", "Bert's Gallery"],
+  },
+  { name: "Manhole", milestone: 8, rooms: ["Dusty Nook", "Slant Street"] },
+  {
+    name: "Trapdoor",
+    milestone: 9,
+    rooms: ["Council Office", "The Frog and Barnacle"],
+  },
 ];

@@ -12,10 +12,10 @@ class GPS {
   #adjacencyMap;
   #cache;
 
-  constructor(detectiveLevel, battleOfFortuneholdCompleted) {
+  constructor(detectiveMilestone, battleOfFortuneholdCompleted) {
     this.#adjacencyMap = new Map();
     this.#cache = new Map();
-    this.#buildAdjacencyMap(detectiveLevel, battleOfFortuneholdCompleted);
+    this.#buildAdjacencyMap(detectiveMilestone, battleOfFortuneholdCompleted);
   }
 
   /**
@@ -121,12 +121,13 @@ class GPS {
     neighbors.push([node2, weight]);
   }
 
-  #buildAdjacencyMap(detectiveLevel, battleOfFortuneholdCompleted) {
+  #buildAdjacencyMap(detectiveMilestone, battleOfFortuneholdCompleted) {
     for (const edge of edges) {
       const [node1, node2] = edge.nodes;
 
-      // If an edge requires a detective level that is higher than the current detective level, skip the edge
-      if (edge.detective > detectiveLevel) {
+      // If an edge is a City Shortcut that unlocks at a higher Detective
+      // milestone than the current one, skip the edge
+      if (edge.detectiveMilestone > detectiveMilestone) {
         continue;
       }
 

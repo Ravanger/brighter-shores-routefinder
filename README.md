@@ -10,7 +10,7 @@ This is a fork of [bricefrisco/brighter-shores-routefinder](https://github.com/b
 Select bounties which you currently have, and the tool will use Dijkstra's algorithm to find the best possible paths 
 for you to take to complete each bounty.
 
-Rooms unlocked by quests and den raids are taken into account, so make sure to configure your settings accordingly.
+Rooms unlocked by quests and Detective City Shortcuts are taken into account, so make sure to configure your settings accordingly.
 
 You can optionally wait and select more bounties when they become available from the bounty board. The tool will 
 calculate the best route from all possible bounties and let you know which ones to abandon and which ones to pick up.
@@ -23,7 +23,7 @@ great way to gauge the accuracy of the tool. If you find these estimations are o
 ## Contributing
 You do not need to be a developer to contribute to the tool. Join our [Discord](https://discord.gg/fcSYv9GPwJ) server to help in various ways:
 
-- The `#data-needed` channel includes specific things we need help with, such as item images or information about den raid rooms.
+- The `#data-needed` channel includes specific things we need help with, such as item images or the node numbers for City Shortcut locations.
 - Post any routes which are faster than what the tool suggests in `#better-routes`
 - Post `#bug-reports`
 - Post `#inaccurate-etas`

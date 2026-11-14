@@ -36,7 +36,7 @@ const RoutePlanner = () => {
     "availableBountiesV2",
   );
 
-  const { detectiveLevel, battleOfFortuneholdCompleted, roundTrip } =
+  const { detectiveMilestone, battleOfFortuneholdCompleted, roundTrip } =
     useSettings();
 
   useEffect(() => {
@@ -72,7 +72,7 @@ const RoutePlanner = () => {
     const message = {
       currentBounties: currentBountyKeys,
       availableBounties: availableBountyKeys,
-      detectiveLevel: detectiveLevel === "" ? 0 : detectiveLevel,
+      detectiveMilestone: detectiveMilestone === "" ? 0 : detectiveMilestone,
       battleOfFortuneholdCompleted,
       roundTrip,
     };
@@ -83,7 +83,7 @@ const RoutePlanner = () => {
   }, [
     bounties,
     availableBounties,
-    detectiveLevel,
+    detectiveMilestone,
     battleOfFortuneholdCompleted,
     roundTrip,
   ]);

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   BF_TO_WIKI_OFFSET,
   WIKI_BOUNDS,
+  WIKI_IMAGE_BOUNDS,
   WIKI_MAX_NATIVE_ZOOM,
   WIKI_MAX_ZOOM,
   WIKI_MIN_NATIVE_ZOOM,
@@ -12,6 +13,7 @@ import {
   WIKI_TRANSFORMATION,
   bfTileToLatLng,
   bfTileToWiki,
+  clampBoundsToImage,
   wikiLatLngToPoint,
   wikiToLatLng,
 } from "./wikiMap.js";
@@ -64,4 +66,58 @@ test("projects latLng to pixels like the wiki map", () => {
   assert.deepEqual(wikiLatLngToPoint([1, -8], 8), [9552, 3408]);
   // Crenopolis Market, in-game (443.5, 61.5): tile (15, 3) at zoom 5.
   assert.deepEqual(wikiLatLngToPoint([61.5, 443.5], 5), [3903, 789]);
+});
+
+// The real image is 33600x19056px = 700x397 tiles, so the tiled area is
+// lng -207..493, lat -70..327 — much smaller than the padded bounds above.
+// The map must never show the void past the real image edge.
+test("derives the real image bounds from the unpadded image size", () => {
+  assert.deepEqual(WIKI_IMAGE_BOUNDS, [
+    [-70, -207],
+    [327, 493],
+  ]);
+});
+
+test("clampBoundsToImage leaves a view inside the image untouched", () => {
+  const view = [
+    [0, 250],
+    [90, 450],
+  ];
+  assert.deepEqual(clampBoundsToImage(view), view);
+});
+
+test("clampBoundsToImage shifts a view overflowing the east edge back inside", () => {
+  // The live 12-stop route's fitted view: east edge past the real image
+  // (wiki x 493) because the wide container shows more than the route bbox.
+  const view = [
+    [-4.5, 246],
+    [93, 502],
+  ];
+  assert.deepEqual(clampBoundsToImage(view), [
+    [-4.5, 237],
+    [93, 493],
+  ]);
+});
+
+test("clampBoundsToImage shifts a view overflowing the west and south edges", () => {
+  assert.deepEqual(
+    clampBoundsToImage([
+      [-80, -220],
+      [10, -100],
+    ]),
+    [
+      [-70, -207],
+      [20, -87],
+    ],
+  );
+});
+
+test("clampBoundsToImage centres a view larger than the image", () => {
+  assert.deepEqual(
+    clampBoundsToImage([
+      [-100, -300],
+      [400, 600],
+    ]),
+    WIKI_IMAGE_BOUNDS,
+  );
 });

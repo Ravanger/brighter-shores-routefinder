@@ -41,6 +41,39 @@ export const WIKI_BOUNDS = [
   [l + paddedTilesY, m + paddedTilesX],
 ];
 
+// The bounds of the REAL image, unpadded: 33600/48 = 700 tiles wide,
+// 19056/48 = 397 tall. The padded bounds above are what the wiki gadget
+// passes to Leaflet, but the tiles only cover this smaller area — past its
+// east edge (wiki x 493) there are blank padding tiles and then nothing at
+// all, which is the blank rectangles / black strip the live map showed.
+// Constrain the view and the tile layer to these bounds instead.
+export const WIKI_IMAGE_BOUNDS = [
+  [l, m],
+  [l + WIKI_IMAGE_HEIGHT / WIKI_TILE_WIDTH, m + WIKI_IMAGE_WIDTH / WIKI_TILE_WIDTH],
+];
+
+/**
+ * Clamp a [[south, west], [north, east]] latLng bounds so it stays inside
+ * the real image bounds. A view smaller than the image is shifted (same
+ * size, same zoom); a view larger than the image in a dimension is shrunk
+ * to the image in that dimension.
+ */
+export const clampBoundsToImage = (view, image = WIKI_IMAGE_BOUNDS) => {
+  const clampSpan = (lo, hi, min, max) => {
+    const size = hi - lo;
+    if (size >= max - min) return [min, max];
+    if (lo < min) return [min, min + size];
+    if (hi > max) return [max - size, max];
+    return [lo, hi];
+  };
+  const [latLo, latHi] = clampSpan(view[0][0], view[1][0], image[0][0], image[1][0]);
+  const [lngLo, lngHi] = clampSpan(view[0][1], view[1][1], image[0][1], image[1][1]);
+  return [
+    [latLo, lngLo],
+    [latHi, lngHi],
+  ];
+};
+
 // BrighterFinder Tile coords -> wiki in-game coords.
 // Verified 2026-11-14 against exact integer NPC positions present in both
 // datasets (the wiki gadget's GeoJSON vs BrighterFinder's lookup_table.json):

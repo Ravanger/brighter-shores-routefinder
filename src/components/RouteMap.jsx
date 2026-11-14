@@ -7,7 +7,7 @@ import {
 } from "../algorithm/routeMapData.js";
 import { nodePositions } from "../algorithm/nodePositions.js";
 import {
-  WIKI_BOUNDS,
+  WIKI_IMAGE_BOUNDS,
   WIKI_MAX_NATIVE_ZOOM,
   WIKI_MAX_ZOOM,
   WIKI_MIN_NATIVE_ZOOM,
@@ -16,6 +16,7 @@ import {
   WIKI_TILE_URL,
   WIKI_TRANSFORMATION,
   bfTileToLatLng,
+  clampBoundsToImage,
 } from "../algorithm/wikiMap.js";
 
 const STEP_MS = 1200;
@@ -131,13 +132,17 @@ const RouteMap = ({
       crs,
       minZoom: WIKI_MIN_ZOOM,
       maxZoom: WIKI_MAX_ZOOM,
-      maxBounds: WIKI_BOUNDS,
+      // The real image bounds, not the wiki's padded bounds: past the
+      // image edge there are no tiles, only blank padding and void.
+      maxBounds: WIKI_IMAGE_BOUNDS,
+      maxBoundsViscosity: 1.0,
     });
     L.tileLayer(WIKI_TILE_URL, {
       minNativeZoom: WIKI_MIN_NATIVE_ZOOM,
       maxNativeZoom: WIKI_MAX_NATIVE_ZOOM,
       noWrap: true,
       tileSize: WIKI_TILE_SIZE,
+      bounds: WIKI_IMAGE_BOUNDS,
       attribution:
         'Tiles: <a href="https://brightershoreswiki.org/w/Map">Brighter Shores Wiki</a> · Positions: <a href="https://brighterfinder.com/">BrighterFinder</a>',
     }).addTo(map);
@@ -157,10 +162,28 @@ const RouteMap = ({
     [],
   );
 
-  // Fit the view to the route when it (or the map) appears.
+  // Fit the view to the route when it (or the map) appears, then pull the
+  // view back inside the real image bounds: fitBounds expands to the
+  // container's aspect ratio, which can push the view past the image edge
+  // (the blank rectangles / black strip at the east edge).
   useEffect(() => {
-    if (mapRef.current && route) {
-      mapRef.current.fitBounds(route.bounds, { padding: [24, 24] });
+    const map = mapRef.current;
+    if (!map || !route) {
+      return;
+    }
+    map.fitBounds(route.bounds, { padding: [24, 24], animate: false });
+    const view = map.getBounds();
+    const clamped = clampBoundsToImage([
+      [view.getSouth(), view.getWest()],
+      [view.getNorth(), view.getEast()],
+    ]);
+    const moved =
+      Math.abs(clamped[0][0] - view.getSouth()) > 1e-9 ||
+      Math.abs(clamped[0][1] - view.getWest()) > 1e-9 ||
+      Math.abs(clamped[1][0] - view.getNorth()) > 1e-9 ||
+      Math.abs(clamped[1][1] - view.getEast()) > 1e-9;
+    if (moved) {
+      map.fitBounds(clamped, { animate: false });
     }
   }, [leaflet, route]);
 

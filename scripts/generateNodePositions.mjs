@@ -1,24 +1,35 @@
-// Fetches BrighterFinder's room database and writes src/algorithm/nodePositions.js:
-// a node number -> [x, y] map in BrighterFinder Tile space for every market,
-// the bounty board and the two portal stones.
+// Fetches the Brighter Shores wiki's map data and writes
+// src/algorithm/nodePositions.js: a node number -> [x, y] map in wiki
+// in-game coords for every market, the bounty board and the two portal
+// stones.
 //
 // Usage: node scripts/generateNodePositions.mjs
 //
-// The positions come from an explicit name mapping below, resolved against the
-// wiki (brightershoreswiki.org) for which NPC runs each shop and which room it
-// is in. Nothing is guessed: if a name, room or marker cannot be resolved the
+// The wiki has no standalone GeoJSON endpoint: the map data (rooms as
+// polygons, entities as points) is embedded in the map gadget's JavaScript
+// (MediaWiki:Gadget-leaflet-wiki.js) as JSON.parse data modules. The
+// generator extracts those modules by shape — a FeatureCollection of
+// Polygons is the rooms, FeatureCollections of Points are the entities —
+// so it keeps working if the gadget's module numbering changes.
+//
+// The positions come from an explicit name mapping below, resolved against
+// the wiki data. A shop resolves to its shopkeeper NPC's marker (more
+// precise than the room centre); a room resolves to its polygon centroid.
+// Nothing is guessed: if a name, room or marker cannot be resolved the
 // script prints what is missing and exits non-zero.
 import { writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { bountyBoard, markets, portals } from "../src/algorithm/nodes.js";
 
-const LOOKUP_URL = "https://brighterfinder.com/data/lookup_table.json";
+const GADGET_URL =
+  "https://brightershoreswiki.org/w/MediaWiki:Gadget-leaflet-wiki.js?action=raw";
 
 // Market name (as in src/algorithm/nodes.js) -> where it lives in the
-// BrighterFinder lookup table. { room } uses the room's centre;
-// { room, marker } uses that marker's position inside the room (the
-// shopkeeper NPC for a shop, which is more precise than the room centre).
+// wiki GeoJSON. { room } uses the room's polygon centroid; { room, marker }
+// uses that marker's position inside the room (the shopkeeper NPC for a
+// shop). The room is the human-readable location; marker lookup is by
+// entity name across the whole GeoJSON.
 const MAPPING = {
   // Markets
   "Victor T Cyclops": {
@@ -54,29 +65,162 @@ const MAPPING = {
   "Penny's Clockwork": { room: "Lord's Road East", marker: "Penny Palmer" },
   "Janessa's Delicacies": { room: "Merchants' Guild", marker: "Janessa Morage" },
   "Textiles Stall": { room: "Waterfront Market", marker: "Quinnis" },
-  // The wiki puts the Cabbage Stall on Twiddle Corner; BrighterFinder puts
-  // the Ignatius marker in the next-door Greengrocers room. The marker tile
-  // is Ignatius either way, so it is used as-is.
-  "Cabbage Stall": { room: "Greengrocers", marker: "Ignatius" },
+  // The wiki puts the Cabbage Stall's Ignatius on Twiddle Corner, next door
+  // to the Greengrocers room — the wiki is more up to date here than the
+  // old BrighterFinder data, which had him in Greengrocers.
+  "Cabbage Stall": { room: "Twiddle Corner", marker: "Ignatius" },
   "Pearl Stall": { room: "Peacock Road South", marker: "Pearl" },
   // Bounty board and portal stones
   "Guild Bounty Board": {
     room: "Merchants' Guild",
     marker: "Guild Bounty Board",
   },
-  "Crenopolis Market": { room: "Crenopolis Market Portal Stone" },
-  "Crenopolis Outskirts": { room: "Crenopolis Outskirts Portal Stone" },
+  "Crenopolis Market": {
+    room: "Crenopolis Market",
+    marker: "Crenopolis Market Portal Stone",
+  },
+  "Crenopolis Outskirts": {
+    room: "Crenopolis Outskirts",
+    marker: "Crenopolis Outskirts Portal Stone",
+  },
 };
 
 const round2 = (value) => Math.round(value * 100) / 100;
 
-const main = async () => {
-  const response = await fetch(LOOKUP_URL);
-  if (!response.ok) {
-    throw new Error(`Fetching ${LOOKUP_URL} failed: ${response.status}`);
+// Decode a JavaScript single-quoted string literal's escapes into the
+// raw text it represents.
+const decodeJsString = (raw) =>
+  raw.replace(/\\(\\|'|"|n|r|t|b|f|v|0|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4})/g, (match, escape) => {
+    switch (escape[0]) {
+      case "\\":
+        return "\\";
+      case "'":
+        return "'";
+      case '"':
+        return '"';
+      case "n":
+        return "\n";
+      case "r":
+        return "\r";
+      case "t":
+        return "\t";
+      case "b":
+        return "\b";
+      case "f":
+        return "\f";
+      case "v":
+        return "\v";
+      case "0":
+        return "\0";
+      case "x":
+        return String.fromCharCode(parseInt(escape.slice(1), 16));
+      case "u":
+        return String.fromCharCode(parseInt(escape.slice(1), 16));
+      default:
+        return match;
+    }
+  });
+
+/**
+ * Extract the embedded GeoJSON from the wiki map gadget's JavaScript:
+ * every JSON.parse('...') literal is parsed and classified by shape.
+ * @param jsText The gadget JavaScript
+ * @returns {{rooms: object[], entities: object[]}} Room and entity features
+ */
+export const extractGeojsonModules = (jsText) => {
+  const rooms = [];
+  const entities = [];
+  const marker = "JSON.parse('";
+  let from = 0;
+  for (;;) {
+    const start = jsText.indexOf(marker, from);
+    if (start === -1) {
+      break;
+    }
+    // Find the closing quote, skipping escaped characters.
+    let end = start + marker.length;
+    while (end < jsText.length) {
+      if (jsText[end] === "\\") {
+        end += 2;
+        continue;
+      }
+      if (jsText[end] === "'") {
+        break;
+      }
+      end += 1;
+    }
+    const raw = jsText.slice(start + marker.length, end);
+    from = end + 1;
+    let parsed;
+    try {
+      parsed = JSON.parse(decodeJsString(raw));
+    } catch {
+      continue;
+    }
+    if (
+      parsed?.type === "FeatureCollection" &&
+      Array.isArray(parsed.features) &&
+      parsed.features.length > 0
+    ) {
+      const geometry = parsed.features[0].geometry?.type;
+      if (geometry === "Polygon") {
+        rooms.push(...parsed.features);
+      } else if (geometry === "Point") {
+        entities.push(...parsed.features);
+      }
+    }
   }
-  const { rooms } = await response.json();
-  const roomByName = new Map(rooms.map((room) => [room.name, room]));
+  return { rooms, entities };
+};
+
+// Polygon area centroid (shoelace formula) of the outer ring.
+const polygonCentroid = (coordinates) => {
+  const ring = coordinates[0];
+  let area2 = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[i + 1];
+    const cross = x1 * y2 - x2 * y1;
+    area2 += cross;
+    cx += (x1 + x2) * cross;
+    cy += (y1 + y2) * cross;
+  }
+  if (Math.abs(area2) < 1e-9) {
+    const xs = ring.map((point) => point[0]);
+    const ys = ring.map((point) => point[1]);
+    return [
+      xs.reduce((a, b) => a + b, 0) / xs.length,
+      ys.reduce((a, b) => a + b, 0) / ys.length,
+    ];
+  }
+  return [cx / (3 * area2), cy / (3 * area2)];
+};
+
+/**
+ * Resolve every market, the bounty board and both portals to a wiki
+ * in-game [x, y] position. Nothing is guessed: anything unresolved is
+ * reported in `unresolved` and left out of `entries`.
+ * @param geojson {rooms, entities} from {@link extractGeojsonModules}
+ * @param mapping Market name -> {room, marker?} (defaults to MAPPING)
+ * @returns {{entries: {name: string, node: number, position: number[], note: string}[], unresolved: string[]}}
+ */
+export const resolvePositions = (geojson, mapping = MAPPING) => {
+  const roomByName = new Map(
+    geojson.rooms.map((room) => [room.properties?.name, room]),
+  );
+  const entitiesByName = new Map();
+  for (const entity of geojson.entities) {
+    const name = entity.properties?.name;
+    if (!name) {
+      continue;
+    }
+    if (!entitiesByName.has(name)) {
+      entitiesByName.set(name, []);
+    }
+    entitiesByName.get(name).push(entity);
+  }
 
   const expected = [
     ...Object.values(markets),
@@ -87,43 +231,77 @@ const main = async () => {
   const entries = [];
 
   for (const { name, node } of expected) {
-    const mapping = MAPPING[name];
-    if (!mapping) {
+    const entry = mapping[name];
+    if (!entry) {
       unresolved.push(`${name} (node ${node}): no entry in MAPPING`);
       continue;
     }
-    const room = roomByName.get(mapping.room);
-    if (!room) {
-      unresolved.push(
-        `${name} (node ${node}): room "${mapping.room}" not in lookup table`,
+    if (entry.marker) {
+      const candidates = entitiesByName.get(entry.marker) ?? [];
+      // Some NPCs appear twice (e.g. a shopkeeper and an event appearance
+      // in Hammerstrike Hall): the shopkeeper is the icon-merchant one.
+      const merchants = candidates.filter((entity) =>
+        (entity.properties?.classes ?? []).includes("icon-merchant"),
       );
-      continue;
-    }
-    if (mapping.marker) {
-      const marker = room.markers.find(
-        (entry) => entry.properties.name === mapping.marker,
-      );
-      if (!marker) {
+      const chosen =
+        candidates.length === 1
+          ? candidates[0]
+          : merchants.length === 1
+            ? merchants[0]
+            : null;
+      if (!chosen) {
         unresolved.push(
-          `${name} (node ${node}): marker "${mapping.marker}" not in room "${mapping.room}"`,
+          `${name} (node ${node}): marker "${entry.marker}" ` +
+            `has ${candidates.length} entities, ${merchants.length} merchant — ambiguous`,
         );
         continue;
       }
       entries.push({
         name,
         node,
-        position: marker.geometry.coordinates.map(round2),
-        note: `marker "${mapping.marker}" in ${mapping.room}`,
+        position: chosen.geometry.coordinates.map(round2),
+        note: `marker "${entry.marker}" in ${entry.room}`,
       });
-    } else {
-      entries.push({
-        name,
-        node,
-        position: room.center.map(round2),
-        note: "room centre",
-      });
+      continue;
     }
+    const room = roomByName.get(entry.room);
+    if (!room) {
+      unresolved.push(
+        `${name} (node ${node}): room "${entry.room}" not in wiki GeoJSON`,
+      );
+      continue;
+    }
+    if (room.geometry?.type !== "Polygon") {
+      unresolved.push(
+        `${name} (node ${node}): room "${entry.room}" is not a polygon`,
+      );
+      continue;
+    }
+    entries.push({
+      name,
+      node,
+      position: polygonCentroid(room.geometry.coordinates).map(round2),
+      note: "room centre",
+    });
   }
+
+  entries.sort((a, b) => a.node - b.node);
+  return { entries, unresolved };
+};
+
+const main = async () => {
+  const response = await fetch(GADGET_URL);
+  if (!response.ok) {
+    throw new Error(`Fetching ${GADGET_URL} failed: ${response.status}`);
+  }
+  const geojson = extractGeojsonModules(await response.text());
+  if (geojson.rooms.length === 0 || geojson.entities.length === 0) {
+    throw new Error(
+      `No GeoJSON found in ${GADGET_URL}: ` +
+        `${geojson.rooms.length} rooms, ${geojson.entities.length} entities`,
+    );
+  }
+  const { entries, unresolved } = resolvePositions(geojson);
 
   if (unresolved.length > 0) {
     console.error("Could not resolve positions for:");
@@ -133,18 +311,17 @@ const main = async () => {
     process.exit(1);
   }
 
-  entries.sort((a, b) => a.node - b.node);
   const lines = entries.map(
     (entry) =>
       `  ${entry.node}: [${entry.position.join(", ")}], // ${entry.name} — ${entry.note}`,
   );
 
   const header = `// Generated by \`node scripts/generateNodePositions.mjs\` — do not edit by hand.
-// Source: ${LOOKUP_URL}
+// Source: ${GADGET_URL}
 // Fetched: ${new Date().toISOString()}
-// Coordinates are BrighterFinder Tile space, rounded to 2 decimals.
-// A position is the room centre unless the comment says it is a shop marker
-// (the shopkeeper NPC's marker inside the room).
+// Coordinates are wiki in-game [x, y], rounded to 2 decimals.
+// A position is the room centre (polygon centroid) unless the comment says
+// it is a shop marker (the shopkeeper NPC's marker inside the room).
 export const nodePositions = {
 ${lines.join("\n")}
 };
@@ -161,4 +338,9 @@ ${lines.join("\n")}
   console.log(`Wrote ${outPath} (${entries.length} positions)`);
 };
 
-main();
+const isMain =
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  main();
+}

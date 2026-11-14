@@ -90,13 +90,9 @@ const About = () => {
             available on GitHub
           </ExternalLink>
           . All code contributions are welcome! The route map uses map tiles
-          from the{" "}
+          and stop positions from the{" "}
           <ExternalLink to="https://brightershoreswiki.org/w/Map">
             Brighter Shores Wiki
-          </ExternalLink>{" "}
-          and stop positions from{" "}
-          <ExternalLink to="https://brighterfinder.com/">
-            BrighterFinder
           </ExternalLink>
           .
         </Paragraph>

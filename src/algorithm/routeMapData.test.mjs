@@ -24,27 +24,27 @@ test("builds numbered stops, the start marker and solid/dashed segments", () => 
   assert.deepEqual(geometry.start, {
     node: 103,
     label: "Guild Bounty Board",
-    x: 513,
-    y: 114,
+    x: 436,
+    y: 42,
   });
   assert.deepEqual(geometry.stops, [
-    { node: 36, label: "Toy Stall", number: 1, x: 491, y: 165 },
-    { node: 84, label: "Cheese Shop", number: 2, x: 323, y: 121 },
+    { node: 36, label: "Toy Stall", number: 1, x: 414, y: 93 },
+    { node: 84, label: "Cheese Shop", number: 2, x: 246, y: 49 },
   ]);
 
   // Legs: board -> Toy Stall (walk), Toy Stall -> Cheese Shop (teleport via
   // the Outskirts portal stone), Cheese Shop -> board (teleport via the
   // Market portal stone).
   assert.deepEqual(geometry.segments, [
-    { points: [[513, 114], [491, 165]], dashed: false },
-    { points: [[491, 165], [369.56, 133.22]], dashed: true },
-    { points: [[369.56, 133.22], [323, 121]], dashed: false },
-    { points: [[323, 121], [520.5, 133.5]], dashed: true },
-    { points: [[520.5, 133.5], [513, 114]], dashed: false },
+    { points: [[436, 42], [414, 93]], dashed: false },
+    { points: [[414, 93], [293, 61]], dashed: true },
+    { points: [[293, 61], [246, 49]], dashed: false },
+    { points: [[246, 49], [443, 61]], dashed: true },
+    { points: [[443, 61], [436, 42]], dashed: false },
   ]);
 
   // Bounding box of the positioned nodes plus 24 units of padding.
-  assert.deepEqual(geometry.viewBox, [299, 90, 245.5, 99]);
+  assert.deepEqual(geometry.viewBox, [222, 18, 245, 99]);
 });
 
 test("skips actions at unknown locations instead of crashing", () => {
@@ -87,12 +87,12 @@ test("flattens segments to ordered points, flagging teleport legs", () => {
   const geometry = buildRouteGeometry(sampleActions, 0, false, true);
 
   assert.deepEqual(flattenRoutePoints(geometry.segments), [
-    { x: 513, y: 114, dashed: false },
-    { x: 491, y: 165, dashed: false },
-    { x: 369.56, y: 133.22, dashed: true },
-    { x: 323, y: 121, dashed: false },
-    { x: 520.5, y: 133.5, dashed: true },
-    { x: 513, y: 114, dashed: false },
+    { x: 436, y: 42, dashed: false },
+    { x: 414, y: 93, dashed: false },
+    { x: 293, y: 61, dashed: true },
+    { x: 246, y: 49, dashed: false },
+    { x: 443, y: 61, dashed: true },
+    { x: 436, y: 42, dashed: false },
   ]);
 });
 
@@ -129,8 +129,8 @@ test("builds steps, places, route points and bounds for the map", () => {
       item: "CARROTS",
       location: "Toy Stall",
       node: 36,
-      x: 491,
-      y: 165,
+      x: 414,
+      y: 93,
       latLng: [93, 414],
       teleport: false,
       portal: null,
@@ -142,8 +142,8 @@ test("builds steps, places, route points and bounds for the map", () => {
       item: "CARROTS",
       location: "Cheese Shop",
       node: 84,
-      x: 323,
-      y: 121,
+      x: 246,
+      y: 49,
       latLng: [49, 246],
       teleport: true,
       portal: "Crenopolis Outskirts",
@@ -155,8 +155,8 @@ test("builds steps, places, route points and bounds for the map", () => {
       item: null,
       location: "Guild Bounty Board",
       node: 103,
-      x: 513,
-      y: 114,
+      x: 436,
+      y: 42,
       latLng: [42, 436],
       teleport: true,
       portal: "Crenopolis Market",
@@ -168,16 +168,16 @@ test("builds steps, places, route points and bounds for the map", () => {
     { node: 84, label: "Cheese Shop", latLng: [49, 246], numbers: [2] },
   ]);
   assert.deepEqual(route.routePoints, [
-    { x: 513, y: 114, dashed: false, latLng: [42, 436] },
-    { x: 491, y: 165, dashed: false, latLng: [93, 414] },
-    { x: 369.56, y: 133.22, dashed: true, latLng: [61.22, 292.56] },
-    { x: 323, y: 121, dashed: false, latLng: [49, 246] },
-    { x: 520.5, y: 133.5, dashed: true, latLng: [61.5, 443.5] },
-    { x: 513, y: 114, dashed: false, latLng: [42, 436] },
+    { x: 436, y: 42, dashed: false, latLng: [42, 436] },
+    { x: 414, y: 93, dashed: false, latLng: [93, 414] },
+    { x: 293, y: 61, dashed: true, latLng: [61, 293] },
+    { x: 246, y: 49, dashed: false, latLng: [49, 246] },
+    { x: 443, y: 61, dashed: true, latLng: [61, 443] },
+    { x: 436, y: 42, dashed: false, latLng: [42, 436] },
   ]);
   assert.deepEqual(route.bounds, [
     [42, 246],
-    [93, 443.5],
+    [93, 443],
   ]);
 });
 
@@ -237,7 +237,7 @@ test("actions at unknown or unpositioned locations get no number and consume non
 
   // Only the Toy Stall has a position: the Cheese Shop is dropped from the
   // map too, and must not leave a gap in the numbering.
-  const sparse = { 36: [491, 165] };
+  const sparse = { 36: [414, 93] };
   assert.deepEqual(assignStopNumbers(actions, sparse), [null, null, 1]);
   const geometry = buildRouteGeometry(actions, 0, false, false, sparse);
   assert.deepEqual(

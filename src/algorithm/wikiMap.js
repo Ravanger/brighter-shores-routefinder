@@ -89,28 +89,8 @@ export const routeLabelZoomClass = (zoom) => {
   return `route-labels-${Math.min(z, WIKI_MAX_ZOOM)}`;
 };
 
-// BrighterFinder Tile coords -> wiki in-game coords.
-// Verified 2026-11-14 against exact integer NPC positions present in both
-// datasets (the wiki gadget's GeoJSON vs BrighterFinder's lookup_table.json):
-// 20 of 21 uniquely-matchable markers agree exactly on (77, 72). The one
-// exception is Ignatius (Cabbage Stall), where the two sources genuinely
-// disagree on where the NPC is — not a transform error. The earlier
-// hover-based estimate (78, 73) was off by (1, 1). Note the offset is not
-// global: other regions (Hopeport, Mine of Mantuban) stitch differently,
-// but every routefinder node sits inside the verified Crenopolis footprint.
-export const BF_TO_WIKI_OFFSET = [77, 72];
-
-/** BrighterFinder Tile [x, y] -> wiki in-game [x, y]. */
-export const bfTileToWiki = ([x, y]) => [
-  x - BF_TO_WIKI_OFFSET[0],
-  y - BF_TO_WIKI_OFFSET[1],
-];
-
 /** Wiki in-game [x, y] -> Leaflet latLng [lat, lng]. */
 export const wikiToLatLng = ([x, y]) => [y, x];
-
-/** BrighterFinder Tile [x, y] -> Leaflet latLng [lat, lng]. */
-export const bfTileToLatLng = (tile) => wikiToLatLng(bfTileToWiki(tile));
 
 /**
  * Replicates L.CRS.Simple + the wiki transformation: latLng [lat, lng] ->

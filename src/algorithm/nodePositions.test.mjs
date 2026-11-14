@@ -25,3 +25,14 @@ test("every market, the bounty board and both portals have a finite [x, y] posit
     );
   }
 });
+
+// Sample positions pinned against the wiki GeoJSON (in-game [x, y]):
+// the board marker and two shopkeepers are exact integer NPC positions,
+// and Ignatius moved when the wiki put him on Twiddle Corner.
+test("pins a sample of wiki positions", () => {
+  assert.deepEqual(nodePositions[103], [436, 42]); // Guild Bounty Board
+  assert.deepEqual(nodePositions[84], [246, 49]); // Ralph Cyclops
+  assert.deepEqual(nodePositions[36], [414, 93]); // Tonya the Tinkerer
+  assert.deepEqual(nodePositions[53], [443, 61]); // Crenopolis Market Portal Stone
+  assert.deepEqual(nodePositions[118], [327, 63]); // Ignatius, Twiddle Corner
+});

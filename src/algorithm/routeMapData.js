@@ -1,7 +1,7 @@
 import GPS from "./gps.js";
 import { bountyBoard, edges, markets, portals } from "./nodes.js";
 import { nodePositions } from "./nodePositions.js";
-import { bfTileToLatLng } from "./wikiMap.js";
+import { wikiToLatLng } from "./wikiMap.js";
 
 const PADDING = 24;
 
@@ -100,7 +100,7 @@ export const buildRouteSteps = (
   );
   const routePoints = flattenRoutePoints(geometry.segments).map((point) => ({
     ...point,
-    latLng: bfTileToLatLng([point.x, point.y]),
+    latLng: wikiToLatLng([point.x, point.y]),
   }));
   const indexOfPoint = (x, y, after = -1) =>
     routePoints.findIndex(
@@ -154,7 +154,7 @@ export const buildRouteSteps = (
       node: stop.node,
       x: stop.x,
       y: stop.y,
-      latLng: bfTileToLatLng([stop.x, stop.y]),
+      latLng: wikiToLatLng([stop.x, stop.y]),
       teleport: leg.teleport,
       portal: leg.portal,
       // Index into routePoints of this stop's position (the previous point
@@ -185,7 +185,7 @@ export const buildRouteSteps = (
       node: geometry.start.node,
       x: geometry.start.x,
       y: geometry.start.y,
-      latLng: bfTileToLatLng([geometry.start.x, geometry.start.y]),
+      latLng: wikiToLatLng([geometry.start.x, geometry.start.y]),
       teleport: leg.teleport,
       portal: leg.portal,
       pointIndex: leg.toIdx !== -1 ? leg.toIdx : Math.max(cursor, 0),

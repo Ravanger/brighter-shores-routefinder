@@ -14,7 +14,7 @@ import {
   WIKI_TILE_SIZE,
   WIKI_TILE_URL,
   WIKI_TRANSFORMATION,
-  bfTileToLatLng,
+  wikiToLatLng,
   clampBoundsToImage,
   routeLabelZoomClass,
 } from "../algorithm/wikiMap.js";
@@ -133,7 +133,7 @@ const RouteMap = ({
       tileSize: WIKI_TILE_SIZE,
       bounds: WIKI_IMAGE_BOUNDS,
       attribution:
-        'Tiles: <a href="https://brightershoreswiki.org/w/Map">Brighter Shores Wiki</a> · Positions: <a href="https://brighterfinder.com/">BrighterFinder</a>',
+        'Tiles and positions: <a href="https://brightershoreswiki.org/w/Map">Brighter Shores Wiki</a>',
     }).addTo(map);
     // Stop-name labels: hidden at low zoom, shown when zoomed in (see
     // routeLabelZoomClass and the .route-stop-label rules in index.css).
@@ -216,7 +216,7 @@ const RouteMap = ({
     }
 
     if (geometry.start) {
-      const start = L.marker(bfTileToLatLng([geometry.start.x, geometry.start.y]), {
+      const start = L.marker(wikiToLatLng([geometry.start.x, geometry.start.y]), {
         icon: startIcon(L),
         interactive: false,
       });

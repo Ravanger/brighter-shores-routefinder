@@ -42,6 +42,7 @@ try {
       "src/algorithm/nodePositions.test.mjs",
       "src/algorithm/routeMapData.test.mjs",
       "src/algorithm/wikiMap.test.mjs",
+      "scripts/generateNodePositions.test.mjs",
       bundledTest,
     ],
     { stdio: "inherit" },

@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  BF_TO_WIKI_OFFSET,
   WIKI_BOUNDS,
   WIKI_IMAGE_BOUNDS,
   WIKI_MAX_NATIVE_ZOOM,
@@ -11,32 +10,15 @@ import {
   WIKI_TILE_SIZE,
   WIKI_TILE_URL,
   WIKI_TRANSFORMATION,
-  bfTileToLatLng,
-  bfTileToWiki,
   clampBoundsToImage,
   routeLabelZoomClass,
   wikiLatLngToPoint,
   wikiToLatLng,
 } from "./wikiMap.js";
 
-// BrighterFinder Tile coords -> wiki in-game coords, pinned against exact
-// integer NPC positions present in both datasets (wiki gadget GeoJSON vs
-// BrighterFinder lookup_table.json). All six agree exactly on (77, 72);
-// the earlier hover-based estimate (78, 73) was off by (1, 1).
-test("converts BrighterFinder tiles to wiki coords with the verified offset", () => {
-  assert.deepEqual(BF_TO_WIKI_OFFSET, [77, 72]);
-  assert.deepEqual(bfTileToWiki([323, 121]), [246, 49]); // Ralph Cyclops
-  assert.deepEqual(bfTileToWiki([491, 165]), [414, 93]); // Tonya the Tinkerer
-  assert.deepEqual(bfTileToWiki([529, 122]), [452, 50]); // Bert
-  assert.deepEqual(bfTileToWiki([336, 125]), [259, 53]); // Victor T Cyclops
-  assert.deepEqual(bfTileToWiki([528, 110]), [451, 38]); // Henderson
-  assert.deepEqual(bfTileToWiki([437, 80]), [360, 8]); // Bubbles MacLeish
-});
-
 test("converts wiki coords to Leaflet latLng as [y, x]", () => {
   assert.deepEqual(wikiToLatLng([246, 49]), [49, 246]);
   assert.deepEqual(wikiToLatLng([-8, 1]), [1, -8]);
-  assert.deepEqual(bfTileToLatLng([323, 121]), [49, 246]);
 });
 
 test("uses the wiki tile URL template (y before x)", () => {

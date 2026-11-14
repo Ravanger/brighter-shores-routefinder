@@ -16,6 +16,7 @@ import {
   WIKI_TRANSFORMATION,
   bfTileToLatLng,
   clampBoundsToImage,
+  routeLabelZoomClass,
 } from "../algorithm/wikiMap.js";
 
 // Numbered stop marker: a pill wide enough for the label ("9–11"), a
@@ -134,6 +135,22 @@ const RouteMap = ({
       attribution:
         'Tiles: <a href="https://brightershoreswiki.org/w/Map">Brighter Shores Wiki</a> · Positions: <a href="https://brighterfinder.com/">BrighterFinder</a>',
     }).addTo(map);
+    // Stop-name labels: hidden at low zoom, shown when zoomed in (see
+    // routeLabelZoomClass and the .route-stop-label rules in index.css).
+    const updateLabels = () => {
+      const container = map.getContainer();
+      container.classList.remove(
+        "route-labels-6",
+        "route-labels-7",
+        "route-labels-8",
+      );
+      const labelClass = routeLabelZoomClass(map.getZoom());
+      if (labelClass) {
+        container.classList.add(labelClass);
+      }
+    };
+    map.on("zoomend", updateLabels);
+    updateLabels();
     mapRef.current = map;
     layersRef.current = L.layerGroup().addTo(map);
   }, [leaflet, route]);
@@ -199,15 +216,29 @@ const RouteMap = ({
     }
 
     if (geometry.start) {
-      L.marker(bfTileToLatLng([geometry.start.x, geometry.start.y]), {
+      const start = L.marker(bfTileToLatLng([geometry.start.x, geometry.start.y]), {
         icon: startIcon(L),
         interactive: false,
-      }).addTo(layers);
+      });
+      start.bindTooltip(geometry.start.label, {
+        permanent: true,
+        direction: "auto",
+        className: "route-stop-label",
+        offset: [12, 0],
+      });
+      start.addTo(layers);
     }
     for (const place of places) {
-      L.marker(place.latLng, {
+      const marker = L.marker(place.latLng, {
         icon: placeIcon(L, formatStopNumbers(place.numbers)),
-      }).addTo(layers);
+      });
+      marker.bindTooltip(place.label, {
+        permanent: true,
+        direction: "auto",
+        className: "route-stop-label",
+        offset: [12, 0],
+      });
+      marker.addTo(layers);
     }
   }, [leaflet, route, geometry]);
 

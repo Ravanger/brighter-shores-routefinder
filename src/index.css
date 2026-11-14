@@ -1,3 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Route map stop-name labels (permanent Leaflet tooltips on the markers).
+ * Hidden at low zoom so the default fitted view stays clean; the map
+ * container gets a route-labels-<zoom> class when zoomed in (see
+ * routeLabelZoomClass), which shows them with a font stepping up with
+ * the zoom. Transparent background with a white halo so the text reads
+ * over the tiles; the container's overflow hides anything at the edge. */
+.route-stop-label {
+  display: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: #1f2937;
+  font-weight: 600;
+  padding: 0;
+  text-shadow:
+    0 0 3px #ffffff,
+    0 0 6px #ffffff;
+}
+
+.route-stop-label::before {
+  display: none;
+}
+
+.route-labels-6 .route-stop-label {
+  display: block;
+  font-size: 11px;
+}
+
+.route-labels-7 .route-stop-label {
+  display: block;
+  font-size: 13px;
+}
+
+.route-labels-8 .route-stop-label {
+  display: block;
+  font-size: 15px;
+}

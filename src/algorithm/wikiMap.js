@@ -74,6 +74,21 @@ export const clampBoundsToImage = (view, image = WIKI_IMAGE_BOUNDS) => {
   ];
 };
 
+// Stop-name labels on the map: hidden at the default fitted view (zoom
+// ~4, where they would overlap) and shown once the user zooms in, with
+// the font stepping up with the zoom. The class is toggled on the map
+// container; the CSS in src/index.css does the showing and sizing.
+export const ROUTE_LABEL_MIN_ZOOM = 6;
+
+/** Zoom -> container class for the stop-name labels ("" = hidden). */
+export const routeLabelZoomClass = (zoom) => {
+  const z = Math.floor(zoom);
+  if (z < ROUTE_LABEL_MIN_ZOOM) {
+    return "";
+  }
+  return `route-labels-${Math.min(z, WIKI_MAX_ZOOM)}`;
+};
+
 // BrighterFinder Tile coords -> wiki in-game coords.
 // Verified 2026-11-14 against exact integer NPC positions present in both
 // datasets (the wiki gadget's GeoJSON vs BrighterFinder's lookup_table.json):

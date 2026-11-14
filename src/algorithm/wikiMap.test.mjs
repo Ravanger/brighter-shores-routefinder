@@ -14,6 +14,7 @@ import {
   bfTileToLatLng,
   bfTileToWiki,
   clampBoundsToImage,
+  routeLabelZoomClass,
   wikiLatLngToPoint,
   wikiToLatLng,
 } from "./wikiMap.js";
@@ -120,4 +121,18 @@ test("clampBoundsToImage centres a view larger than the image", () => {
     ]),
     WIKI_IMAGE_BOUNDS,
   );
+});
+
+// Stop-name labels stay hidden at the default fitted view (zoom ~4) so it
+// stays as clean as now, and appear with a bigger font as the user zooms in.
+test("route labels stay hidden below zoom 6 and step up in size above it", () => {
+  assert.equal(routeLabelZoomClass(3), "");
+  assert.equal(routeLabelZoomClass(4), "");
+  assert.equal(routeLabelZoomClass(5), "");
+  assert.equal(routeLabelZoomClass(5.9), "");
+  assert.equal(routeLabelZoomClass(6), "route-labels-6");
+  assert.equal(routeLabelZoomClass(6.4), "route-labels-6");
+  assert.equal(routeLabelZoomClass(7), "route-labels-7");
+  assert.equal(routeLabelZoomClass(8), "route-labels-8");
+  assert.equal(routeLabelZoomClass(9), "route-labels-8");
 });

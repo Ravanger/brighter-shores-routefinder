@@ -6,6 +6,7 @@ import useSettings from "../hooks/useSettings.js";
 import Paragraph from "../components/Paragraph.jsx";
 import InternalLink from "../components/InternalLink.jsx";
 import Bounty from "../components/Bounty.jsx";
+import RouteMap from "../components/RouteMap.jsx";
 
 const worker = new Worker(new URL("../algorithm/worker.js", import.meta.url), {
   type: "module",
@@ -204,6 +205,15 @@ const RoutePlanner = () => {
             ))}
           </div>
         </>
+      ) : null}
+
+      {result?.actions?.length ? (
+        <RouteMap
+          actions={result.actions}
+          detectiveMilestone={detectiveMilestone === "" ? 0 : detectiveMilestone}
+          battleOfFortuneholdCompleted={battleOfFortuneholdCompleted}
+          roundTrip={roundTrip}
+        />
       ) : null}
 
       {result?.actions?.length ? (

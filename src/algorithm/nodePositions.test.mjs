@@ -1,0 +1,27 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { nodePositions } from "./nodePositions.js";
+import { bountyBoard, markets, portals } from "./nodes.js";
+
+test("every market, the bounty board and both portals have a finite [x, y] position", () => {
+  const expected = [
+    ...Object.values(markets),
+    bountyBoard,
+    ...Object.values(portals),
+  ];
+
+  assert.equal(expected.length, 30);
+
+  for (const { name, node } of expected) {
+    const position = nodePositions[node];
+    assert.ok(
+      Array.isArray(position),
+      `${name} (node ${node}) has no position`,
+    );
+    assert.equal(position.length, 2, `${name} position is not [x, y]`);
+    assert.ok(
+      Number.isFinite(position[0]) && Number.isFinite(position[1]),
+      `${name} position is not finite`,
+    );
+  }
+});

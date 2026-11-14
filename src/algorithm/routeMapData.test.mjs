@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildRouteGeometry } from "./routeMapData.js";
+import {
+  buildRouteGeometry,
+  buildRouteSteps,
+  flattenRoutePoints,
+  formatStepCaption,
+  formatStopNumbers,
+} from "./routeMapData.js";
 
 // Buy at the Toy Stall, sell at the Cheese Shop, then return to the board.
 // The teleport action in the middle is an intermediate step, not a stop.
@@ -75,4 +81,150 @@ test("returns null when there are no buy/sell stops", () => {
 
 test("returns null when no stop has a position", () => {
   assert.equal(buildRouteGeometry(sampleActions, 0, false, true, {}), null);
+});
+
+test("flattens segments to ordered points, flagging teleport legs", () => {
+  const geometry = buildRouteGeometry(sampleActions, 0, false, true);
+
+  assert.deepEqual(flattenRoutePoints(geometry.segments), [
+    { x: 513, y: 114, dashed: false },
+    { x: 491, y: 165, dashed: false },
+    { x: 369.56, y: 133.22, dashed: true },
+    { x: 323, y: 121, dashed: false },
+    { x: 520.5, y: 133.5, dashed: true },
+    { x: 513, y: 114, dashed: false },
+  ]);
+});
+
+test("flattenRoutePoints skips duplicate join points and empty segments", () => {
+  assert.deepEqual(
+    flattenRoutePoints([
+      { points: [[1, 2]], dashed: false },
+      { points: [], dashed: true },
+      {
+        points: [
+          [1, 2],
+          [3, 4],
+        ],
+        dashed: false,
+      },
+    ]),
+    [
+      { x: 1, y: 2, dashed: false },
+      { x: 3, y: 4, dashed: false },
+    ],
+  );
+  assert.deepEqual(flattenRoutePoints([]), []);
+});
+
+test("builds steps, places, route points and bounds for the map", () => {
+  const geometry = buildRouteGeometry(sampleActions, 0, false, true);
+  const route = buildRouteSteps(geometry, sampleActions, true);
+
+  assert.ok(route);
+  assert.deepEqual(route.steps, [
+    {
+      number: 1,
+      type: "buy",
+      item: "CARROTS",
+      location: "Toy Stall",
+      node: 36,
+      x: 491,
+      y: 165,
+      latLng: [93, 414],
+      teleport: false,
+      portal: null,
+      pointIndex: 1,
+    },
+    {
+      number: 2,
+      type: "sell",
+      item: "CARROTS",
+      location: "Cheese Shop",
+      node: 84,
+      x: 323,
+      y: 121,
+      latLng: [49, 246],
+      teleport: true,
+      portal: "Crenopolis Outskirts",
+      pointIndex: 3,
+    },
+    {
+      number: null,
+      type: "Return",
+      item: null,
+      location: "Guild Bounty Board",
+      node: 103,
+      x: 513,
+      y: 114,
+      latLng: [42, 436],
+      teleport: true,
+      portal: "Crenopolis Market",
+      pointIndex: 5,
+    },
+  ]);
+  assert.deepEqual(route.places, [
+    { node: 36, label: "Toy Stall", latLng: [93, 414], numbers: [1] },
+    { node: 84, label: "Cheese Shop", latLng: [49, 246], numbers: [2] },
+  ]);
+  assert.deepEqual(route.routePoints, [
+    { x: 513, y: 114, dashed: false, latLng: [42, 436] },
+    { x: 491, y: 165, dashed: false, latLng: [93, 414] },
+    { x: 369.56, y: 133.22, dashed: true, latLng: [61.22, 292.56] },
+    { x: 323, y: 121, dashed: false, latLng: [49, 246] },
+    { x: 520.5, y: 133.5, dashed: true, latLng: [61.5, 443.5] },
+    { x: 513, y: 114, dashed: false, latLng: [42, 436] },
+  ]);
+  assert.deepEqual(route.bounds, [
+    [42, 246],
+    [93, 443.5],
+  ]);
+});
+
+test("buildRouteSteps returns null without geometry", () => {
+  assert.equal(buildRouteSteps(null, sampleActions, true), null);
+});
+
+test("groups duplicate stops into one place with all their numbers", () => {
+  const actions = [
+    { type: "buy", item: "CARROTS", location: "Toy Stall", distance: 10 },
+    { type: "buy", item: "SOAP", location: "Toy Stall", distance: 20 },
+    { type: "sell", item: "CARROTS", location: "Cheese Shop", distance: 30 },
+  ];
+  const geometry = buildRouteGeometry(actions, 0, false, false);
+  const route = buildRouteSteps(geometry, actions, false);
+
+  assert.deepEqual(route.places, [
+    { node: 36, label: "Toy Stall", latLng: [93, 414], numbers: [1, 2] },
+    { node: 84, label: "Cheese Shop", latLng: [49, 246], numbers: [3] },
+  ]);
+});
+
+test("formats stop numbers as ranges", () => {
+  assert.equal(formatStopNumbers([1]), "1");
+  assert.equal(formatStopNumbers([9, 10, 11]), "9–11");
+  assert.equal(formatStopNumbers([4, 7]), "4, 7");
+  assert.equal(formatStopNumbers([4, 5, 7]), "4–5, 7");
+});
+
+test("formats step captions, including teleports and the return", () => {
+  const geometry = buildRouteGeometry(sampleActions, 0, false, true);
+  const route = buildRouteSteps(geometry, sampleActions, true);
+
+  assert.equal(
+    formatStepCaption(route.steps, 0, 2),
+    "Start at Guild Bounty Board",
+  );
+  assert.equal(
+    formatStepCaption(route.steps, 1, 2),
+    "Step 1 of 2: Buy Carrots at Toy Stall",
+  );
+  assert.equal(
+    formatStepCaption(route.steps, 2, 2),
+    "Step 2 of 2: Teleport to Crenopolis Outskirts, then Sell Carrots at Cheese Shop",
+  );
+  assert.equal(
+    formatStepCaption(route.steps, 3, 2),
+    "Teleport to Crenopolis Market, then return to Guild Bounty Board",
+  );
 });

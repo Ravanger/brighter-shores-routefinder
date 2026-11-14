@@ -27,6 +27,9 @@ try {
       "--platform=node",
       "--format=cjs",
       "--jsx=automatic",
+      // RouteMap dynamically imports leaflet (client-only); keep it external
+      // so the bundle step does not try to split it into chunks.
+      "--external:leaflet",
       `--outfile=${bundledTest}`,
     ],
     { stdio: "inherit" },
@@ -38,6 +41,7 @@ try {
       "--test",
       "src/algorithm/nodePositions.test.mjs",
       "src/algorithm/routeMapData.test.mjs",
+      "src/algorithm/wikiMap.test.mjs",
       bundledTest,
     ],
     { stdio: "inherit" },

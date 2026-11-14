@@ -38,8 +38,12 @@ const RoutePlanner = () => {
     "availableBountiesV2",
   );
 
-  const { detectiveMilestone, battleOfFortuneholdCompleted, roundTrip } =
-    useSettings();
+  const {
+    detectiveMilestone,
+    battleOfFortuneholdCompleted,
+    roundTrip,
+    expressBountyBoard,
+  } = useSettings();
 
   // Stop numbers for the actions list, from the same ordering as the map's
   // numbered markers (see assignStopNumbers).
@@ -84,6 +88,7 @@ const RoutePlanner = () => {
       detectiveMilestone: detectiveMilestone === "" ? 0 : detectiveMilestone,
       battleOfFortuneholdCompleted,
       roundTrip,
+      expressBountyBoard,
     };
 
     console.log("message", message);
@@ -95,6 +100,7 @@ const RoutePlanner = () => {
     detectiveMilestone,
     battleOfFortuneholdCompleted,
     roundTrip,
+    expressBountyBoard,
   ]);
 
   const bountiesToAbandon = useMemo(() => {
@@ -221,6 +227,7 @@ const RoutePlanner = () => {
           detectiveMilestone={detectiveMilestone === "" ? 0 : detectiveMilestone}
           battleOfFortuneholdCompleted={battleOfFortuneholdCompleted}
           roundTrip={roundTrip}
+          expressBountyBoard={expressBountyBoard}
         />
       ) : null}
 

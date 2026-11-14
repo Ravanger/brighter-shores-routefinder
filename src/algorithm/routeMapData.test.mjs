@@ -7,6 +7,7 @@ import {
   flattenRoutePoints,
   formatStopNumbers,
 } from "./routeMapData.js";
+import { expressBountyBoard } from "./nodes.js";
 
 // Buy at the Toy Stall, sell at the Cheese Shop, then return to the board.
 // The teleport action in the middle is an intermediate step, not a stop.
@@ -45,6 +46,51 @@ test("builds numbered stops, the start marker and solid/dashed segments", () => 
 
   // Bounding box of the positioned nodes plus 24 units of padding.
   assert.deepEqual(geometry.viewBox, [222, 18, 245, 99]);
+});
+
+test("starts at the Express Bounty Board when it is the board", () => {
+  const geometry = buildRouteGeometry(
+    sampleActions,
+    0,
+    false,
+    true,
+    undefined,
+    expressBountyBoard,
+  );
+
+  assert.ok(geometry);
+  assert.deepEqual(geometry.start, {
+    node: 59,
+    label: "Express Bounty Board",
+    x: 429,
+    y: 50,
+  });
+
+  // The first leg leaves the Express board and the last returns to it; the
+  // middle legs are unchanged from the Guild board route.
+  assert.deepEqual(geometry.segments, [
+    { points: [[429, 50], [414, 93]], dashed: false },
+    { points: [[414, 93], [293, 61]], dashed: true },
+    { points: [[293, 61], [246, 49]], dashed: false },
+    { points: [[246, 49], [443, 61]], dashed: true },
+    { points: [[443, 61], [429, 50]], dashed: false },
+  ]);
+
+  const route = buildRouteSteps(geometry, sampleActions, true);
+  const ret = route.steps.find((step) => step.type === "Return");
+  assert.deepEqual(ret, {
+    number: null,
+    type: "Return",
+    item: null,
+    location: "Express Bounty Board",
+    node: 59,
+    x: 429,
+    y: 50,
+    latLng: [50, 429],
+    teleport: true,
+    portal: "Crenopolis Market",
+    pointIndex: 5,
+  });
 });
 
 test("skips actions at unknown locations instead of crashing", () => {

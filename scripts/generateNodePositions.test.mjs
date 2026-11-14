@@ -68,7 +68,7 @@ test("reports unresolved positions instead of guessing", () => {
   });
 
   assert.deepEqual(entries, []);
-  assert.equal(unresolved.length, 30); // every expected market/board/portal
+  assert.equal(unresolved.length, 31); // every expected market/board/portal
   assert.ok(unresolved.some((line) => /Soap Shop.*No Such NPC/.test(line)));
   assert.ok(
     unresolved.some((line) => /Hermar's Homeware.*No Such Room/.test(line)),

@@ -171,7 +171,7 @@ export const buildRouteSteps = (
   if (
     geometry.start &&
     lastStep &&
-    (hasReturn || (roundTrip && lastStep.node !== bountyBoard.node))
+    (hasReturn || (roundTrip && lastStep.node !== geometry.start.node))
   ) {
     const leg =
       cursor === -1
@@ -256,6 +256,8 @@ export const assignStopNumbers = (actions, positions = nodePositions) => {
  * @param battleOfFortuneholdCompleted Whether Battle of Fortunehold is done
  * @param roundTrip Whether the route returns to the bounty board
  * @param positions Node number -> [x, y] (defaults to {@link nodePositions})
+ * @param board The bounty board the route starts at ({@link bountyBoard} or
+ *   {@link expressBountyBoard})
  * @returns {{
  *   segments: {points: number[][], dashed: boolean}[],
  *   stops: {node: number, label: string, number: number, x: number, y: number}[],
@@ -270,6 +272,7 @@ export const buildRouteGeometry = (
   battleOfFortuneholdCompleted,
   roundTrip,
   positions = nodePositions,
+  board = bountyBoard,
 ) => {
   const marketByName = new Map(
     Object.values(markets).map((market) => [market.name, market.node]),
@@ -279,7 +282,7 @@ export const buildRouteGeometry = (
   // then the board again for the return trip. A market with no position
   // is skipped before numbering, so the map's numbers never have gaps —
   // the actions list numbers from the same ordering (see assignStopNumbers).
-  const stops = [bountyBoard.node];
+  const stops = [board.node];
   const numberedStops = [];
   for (const action of actions) {
     if (action.type !== "buy" && action.type !== "sell") {
@@ -302,11 +305,8 @@ export const buildRouteGeometry = (
   }
 
   const hasReturn = actions.some((action) => action.type === "Return");
-  if (
-    hasReturn ||
-    (roundTrip && stops[stops.length - 1] !== bountyBoard.node)
-  ) {
-    stops.push(bountyBoard.node);
+  if (hasReturn || (roundTrip && stops[stops.length - 1] !== board.node)) {
+    stops.push(board.node);
   }
 
   const milestone =
@@ -402,7 +402,7 @@ export const buildRouteGeometry = (
     Math.max(...ys) - Math.min(...ys) + PADDING * 2,
   ];
 
-  const boardPosition = positions[bountyBoard.node];
+  const boardPosition = positions[board.node];
   return {
     segments,
     stops: numberedStops.map((stop) => ({
@@ -412,8 +412,8 @@ export const buildRouteGeometry = (
     })),
     start: boardPosition
       ? {
-          node: bountyBoard.node,
-          label: bountyBoard.name,
+          node: board.node,
+          label: board.name,
           x: boardPosition[0],
           y: boardPosition[1],
         }

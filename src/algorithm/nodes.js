@@ -8,6 +8,19 @@ export const bountyBoard = {
 };
 
 /**
+ * The Express Bounty Board, in the South Player Market — the room directly
+ * south of the Merchants' Guild, unlocked after The Imposter quest. Graph
+ * node 59 is the waypoint at the room's north end, next to the board: the
+ * board's wiki position is [429, 50] and 59 is the nearest waypoint to it
+ * on the upstream map (node 50 is mid-room, node 51 is the south edge).
+ * All node numbers can be referenced in the brighter shores world map file mentioned in the code repositories README.
+ */
+export const expressBountyBoard = {
+  name: "Express Bounty Board",
+  node: 59,
+};
+
+/**
  * Portals that players can teleport to.
  * All node numbers can be referenced in the brighter shores world map file mentioned in the code repositories README.
  */

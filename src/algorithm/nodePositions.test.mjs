@@ -1,16 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { nodePositions } from "./nodePositions.js";
-import { bountyBoard, markets, portals } from "./nodes.js";
+import {
+  bountyBoard,
+  expressBountyBoard,
+  markets,
+  portals,
+} from "./nodes.js";
 
-test("every market, the bounty board and both portals have a finite [x, y] position", () => {
+test("every market, both bounty boards and both portals have a finite [x, y] position", () => {
   const expected = [
     ...Object.values(markets),
     bountyBoard,
+    expressBountyBoard,
     ...Object.values(portals),
   ];
 
-  assert.equal(expected.length, 30);
+  assert.equal(expected.length, 31);
 
   for (const { name, node } of expected) {
     const position = nodePositions[node];
@@ -27,10 +33,11 @@ test("every market, the bounty board and both portals have a finite [x, y] posit
 });
 
 // Sample positions pinned against the wiki GeoJSON (in-game [x, y]):
-// the board marker and two shopkeepers are exact integer NPC positions,
+// the board markers and two shopkeepers are exact integer NPC positions,
 // and Ignatius moved when the wiki put him on Twiddle Corner.
 test("pins a sample of wiki positions", () => {
   assert.deepEqual(nodePositions[103], [436, 42]); // Guild Bounty Board
+  assert.deepEqual(nodePositions[59], [429, 50]); // Express Bounty Board
   assert.deepEqual(nodePositions[84], [246, 49]); // Ralph Cyclops
   assert.deepEqual(nodePositions[36], [414, 93]); // Tonya the Tinkerer
   assert.deepEqual(nodePositions[53], [443, 61]); // Crenopolis Market Portal Stone

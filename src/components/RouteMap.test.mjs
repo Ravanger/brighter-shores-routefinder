@@ -49,3 +49,16 @@ test("renders nothing when no stop has a position", () => {
 
   assert.equal(html, "");
 });
+
+test("renders the map container with the Express board selected", () => {
+  const html = render({
+    actions: sampleActions,
+    detectiveMilestone: 0,
+    battleOfFortuneholdCompleted: false,
+    roundTrip: true,
+    expressBountyBoard: true,
+  });
+
+  assert.match(html, /role="application"/); // map container
+  assert.match(html, /aria-label="Route map"/);
+});

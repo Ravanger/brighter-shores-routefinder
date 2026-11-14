@@ -12,12 +12,14 @@ const Configuration = () => {
     detectiveLevel,
     battleOfFortuneholdCompleted,
     roundTrip,
+    expressBountyBoard,
     setMerchantingMilestone,
     setMerchantingLevel,
     setDetectiveMilestone,
     setDetectiveLevel,
     setBattleOfFortuneholdCompleted,
     setRoundTrip,
+    setExpressBountyBoard,
   } = useSettings();
 
   return (
@@ -155,6 +157,30 @@ const Configuration = () => {
           className="ms-2 text-sm font-medium text-gray-900 dark:text-white cursor-pointer"
         >
           Round Trips
+        </label>
+      </div>
+
+      <Subheading>Bounty Board</Subheading>
+      <Paragraph>
+        After The Imposter quest, the Express Bounty Board in the South
+        Player Market offers a different set of bounties and sits closer to
+        the teleport than the Guild Bounty Board. If enabled, routes start
+        and end there instead.
+      </Paragraph>
+
+      <div className="flex items-center mb-4 select-none">
+        <input
+          id="express-bounty-board"
+          type="checkbox"
+          checked={expressBountyBoard}
+          onChange={(e) => setExpressBountyBoard(e.target.checked)}
+          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+        />
+        <label
+          htmlFor="express-bounty-board"
+          className="ms-2 text-sm font-medium text-gray-900 dark:text-white cursor-pointer"
+        >
+          Express bounty board
         </label>
       </div>
 

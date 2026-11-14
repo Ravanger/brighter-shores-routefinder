@@ -1,6 +1,6 @@
 // Fetches the Brighter Shores wiki's map data and writes
 // src/algorithm/nodePositions.js: a node number -> [x, y] map in wiki
-// in-game coords for every market, the bounty board and the two portal
+// in-game coords for every market, both bounty boards and the two portal
 // stones.
 //
 // Usage: node scripts/generateNodePositions.mjs
@@ -20,7 +20,7 @@
 import { writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { bountyBoard, markets, portals } from "../src/algorithm/nodes.js";
+import { bountyBoard, expressBountyBoard, markets, portals } from "../src/algorithm/nodes.js";
 
 const GADGET_URL =
   "https://brightershoreswiki.org/w/MediaWiki:Gadget-leaflet-wiki.js?action=raw";
@@ -70,10 +70,17 @@ const MAPPING = {
   // old BrighterFinder data, which had him in Greengrocers.
   "Cabbage Stall": { room: "Twiddle Corner", marker: "Ignatius" },
   "Pearl Stall": { room: "Peacock Road South", marker: "Pearl" },
-  // Bounty board and portal stones
+  // Bounty boards and portal stones
   "Guild Bounty Board": {
     room: "Merchants' Guild",
     marker: "Guild Bounty Board",
+  },
+  // The Express board is the board in the South Player Market, the room
+  // south of the Merchants' Guild; graph node 59 is the waypoint at the
+  // room's north end, next to the board.
+  "Express Bounty Board": {
+    room: "South Player Market",
+    marker: "Express Bounty Board",
   },
   "Crenopolis Market": {
     room: "Crenopolis Market",
@@ -199,7 +206,7 @@ const polygonCentroid = (coordinates) => {
 };
 
 /**
- * Resolve every market, the bounty board and both portals to a wiki
+ * Resolve every market, both bounty boards and both portals to a wiki
  * in-game [x, y] position. Nothing is guessed: anything unresolved is
  * reported in `unresolved` and left out of `entries`.
  * @param geojson {rooms, entities} from {@link extractGeojsonModules}
@@ -225,6 +232,7 @@ export const resolvePositions = (geojson, mapping = MAPPING) => {
   const expected = [
     ...Object.values(markets),
     bountyBoard,
+    expressBountyBoard,
     ...Object.values(portals),
   ];
   const unresolved = [];

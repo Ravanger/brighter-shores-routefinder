@@ -3,7 +3,7 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import GPS from "./gps.js";
 import combinations from "./combinations.js";
 import { BountyStatus } from "./bounties.js";
-import { bountyBoard, portals } from "./nodes.js";
+import { bountyBoard, expressBountyBoard as expressBoard, portals } from "./nodes.js";
 import { bounties as bountyData } from "./bounties.js";
 
 /**
@@ -27,6 +27,7 @@ class Pathfinder {
    * @param detectiveMilestone The player's Detective milestone (0-9), used to determine which City Shortcuts can be used
    * @param battleOfFortuneholdCompleted Whether the player has completed the Battle of Fortunehold quest which unlocks an additional room
    * @param roundTrip Whether to return to the bounty board after completing all deliveries
+   * @param expressBountyBoard Whether to start at the Express Bounty Board in the South Player Market instead of the Guild Bounty Board
    * @returns {
    *     {bounties: string[]},    // An array of keys from {@link bountyData} representing the best bounties to complete
    *     {actions:    string[]},  // An array of actions to take to complete the deliveries
@@ -39,6 +40,7 @@ class Pathfinder {
     detectiveMilestone,
     battleOfFortuneholdCompleted,
     roundTrip,
+    expressBountyBoard = false,
   ) {
     const result = {
       bounties: [],
@@ -48,6 +50,7 @@ class Pathfinder {
     };
 
     const gps = new GPS(detectiveMilestone, battleOfFortuneholdCompleted);
+    const board = expressBountyBoard ? expressBoard : bountyBoard;
 
     const allBounties = [...currentBounties, ...availableBounties];
     const combos = combinations(allBounties, Math.min(allBounties.length, 6));
@@ -70,7 +73,13 @@ class Pathfinder {
         0,
       );
 
-      const route = this.findBestRoute(combo, gps, result.distance, roundTrip);
+      const route = this.findBestRoute(
+        combo,
+        gps,
+        result.distance,
+        roundTrip,
+        board,
+      );
       if (route === null) {
         // Route was not shorter than the current best
         return;
@@ -92,18 +101,25 @@ class Pathfinder {
    * @param gps An instance of the GPS class
    * @param threshold This method will "give up" on paths that are longer than this distance
    * @param roundTrip Whether to return to the bounty board after completing all deliveries
+   * @param board The bounty board to start at and return to ({@link bountyBoard} or {@link expressBoard})
    * @returns {{actions: string[], distance: number} | null}
    *  Returns an object containing the actions to take and the total distance
    *  Returns null if no route is found that is shorter than the threshold
    */
-  findBestRoute(bounties, gps, threshold = Number.MAX_SAFE_INTEGER, roundTrip) {
+  findBestRoute(
+    bounties,
+    gps,
+    threshold = Number.MAX_SAFE_INTEGER,
+    roundTrip,
+    board = bountyBoard,
+  ) {
     const pq = new PriorityQueue((a, b) => a.distance - b.distance);
     const visited = new Map();
 
     pq.enqueue({
       distance: 0,
       previousNode: null,
-      currentNode: bountyBoard.node,
+      currentNode: board.node,
       bountyStates: [...new Array(bounties.length)].map(
         () => BountyStatus.NOT_STARTED,
       ),
@@ -204,18 +220,18 @@ class Pathfinder {
       }
 
       if (this.#deliveriesCompleted(bountyStates)) {
-        if (roundTrip && currentNode !== bountyBoard.node) {
-          distance += gps.distance(currentNode, bountyBoard.node).distance;
-          this.#addTravelSteps(gps, actions, currentNode, bountyBoard.node);
+        if (roundTrip && currentNode !== board.node) {
+          distance += gps.distance(currentNode, board.node).distance;
+          this.#addTravelSteps(gps, actions, currentNode, board.node);
           actions.push({
             type: "Return",
-            location: bountyBoard.name,
+            location: board.name,
             distance,
           });
           pq.enqueue({
             distance,
             previousNode: currentNode,
-            currentNode: bountyBoard.node,
+            currentNode: board.node,
             bountyStates,
             actions,
           });

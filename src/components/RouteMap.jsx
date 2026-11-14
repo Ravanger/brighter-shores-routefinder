@@ -5,6 +5,7 @@ import {
   formatStopNumbers,
 } from "../algorithm/routeMapData.js";
 import { nodePositions } from "../algorithm/nodePositions.js";
+import { bountyBoard, expressBountyBoard as expressBoard } from "../algorithm/nodes.js";
 import {
   WIKI_IMAGE_BOUNDS,
   WIKI_MAX_NATIVE_ZOOM,
@@ -54,8 +55,10 @@ const RouteMap = ({
   detectiveMilestone,
   battleOfFortuneholdCompleted,
   roundTrip,
+  expressBountyBoard = false,
   positions = nodePositions,
 }) => {
+  const board = expressBountyBoard ? expressBoard : bountyBoard;
   const geometry = useMemo(
     () =>
       buildRouteGeometry(
@@ -64,6 +67,7 @@ const RouteMap = ({
         battleOfFortuneholdCompleted,
         roundTrip,
         positions,
+        board,
       ),
     [
       actions,
@@ -71,6 +75,7 @@ const RouteMap = ({
       battleOfFortuneholdCompleted,
       roundTrip,
       positions,
+      board,
     ],
   );
   const route = useMemo(

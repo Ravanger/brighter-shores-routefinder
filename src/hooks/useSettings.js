@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const defaultSettings = {
+export const defaultSettings = {
   // Milestone 1, level 0 is the new-scale equivalent of the old level 100
   // default. Intentionally defaulted for now since higher levels have no images yet.
   merchantingMilestone: 1,
@@ -12,6 +12,9 @@ const defaultSettings = {
   detectiveLevel: 0,
   battleOfFortuneholdCompleted: false,
   roundTrip: true,
+  // The Express Bounty Board in the South Player Market needs The Imposter
+  // quest, so it stays off unless the player has it.
+  expressBountyBoard: false,
 };
 
 const useSettings = () => {
@@ -67,6 +70,10 @@ const useSettings = () => {
     return settings.roundTrip;
   }, [settings]);
 
+  const expressBountyBoard = useMemo(() => {
+    return settings.expressBountyBoard ?? false;
+  }, [settings]);
+
   const setMerchantingMilestone = (merchantingMilestone) => {
     setSettings((settings) => ({
       ...settings,
@@ -111,6 +118,13 @@ const useSettings = () => {
     }));
   };
 
+  const setExpressBountyBoard = (expressBountyBoard) => {
+    setSettings((settings) => ({
+      ...settings,
+      expressBountyBoard,
+    }));
+  };
+
   return {
     merchantingMilestone,
     merchantingLevel,
@@ -118,12 +132,14 @@ const useSettings = () => {
     detectiveLevel,
     battleOfFortuneholdCompleted,
     roundTrip,
+    expressBountyBoard,
     setMerchantingMilestone,
     setMerchantingLevel,
     setDetectiveMilestone,
     setDetectiveLevel,
     setBattleOfFortuneholdCompleted,
     setRoundTrip,
+    setExpressBountyBoard,
   };
 };
 

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  assignStopNumbers,
   buildRouteGeometry,
   buildRouteSteps,
   flattenRoutePoints,
@@ -204,4 +205,43 @@ test("formats stop numbers as ranges", () => {
   assert.equal(formatStopNumbers([9, 10, 11]), "9–11");
   assert.equal(formatStopNumbers([4, 7]), "4, 7");
   assert.equal(formatStopNumbers([4, 5, 7]), "4–5, 7");
+});
+
+// The actions list and the map must number stops from the same ordering:
+// buy/sell actions 1..N in action order; teleport and Return show none.
+test("assigns stop numbers to buy/sell actions only, in action order", () => {
+  assert.deepEqual(assignStopNumbers(sampleActions), [1, null, 2, null]);
+});
+
+test("list numbering matches the map steps for the same actions", () => {
+  const geometry = buildRouteGeometry(sampleActions, 0, false, true);
+  const route = buildRouteSteps(geometry, sampleActions, true);
+  const mapNumbers = route.steps
+    .filter((step) => step.number !== null)
+    .map((step) => step.number);
+
+  assert.deepEqual(
+    assignStopNumbers(sampleActions).filter((n) => n !== null),
+    mapNumbers,
+  );
+});
+
+test("actions at unknown or unpositioned locations get no number and consume none", () => {
+  const actions = [
+    { type: "buy", item: "CARROTS", location: "Nowhere Market", distance: 5 },
+    { type: "buy", item: "SOAP", location: "Cheese Shop", distance: 10 },
+    { type: "buy", item: "CARROTS", location: "Toy Stall", distance: 20 },
+  ];
+  // Default positions: the unknown market gets no number, the rest follow.
+  assert.deepEqual(assignStopNumbers(actions), [null, 1, 2]);
+
+  // Only the Toy Stall has a position: the Cheese Shop is dropped from the
+  // map too, and must not leave a gap in the numbering.
+  const sparse = { 36: [491, 165] };
+  assert.deepEqual(assignStopNumbers(actions, sparse), [null, null, 1]);
+  const geometry = buildRouteGeometry(actions, 0, false, false, sparse);
+  assert.deepEqual(
+    geometry.stops.map((stop) => stop.number),
+    [1],
+  );
 });

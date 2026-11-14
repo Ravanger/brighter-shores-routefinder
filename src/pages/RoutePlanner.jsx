@@ -7,6 +7,7 @@ import Paragraph from "../components/Paragraph.jsx";
 import InternalLink from "../components/InternalLink.jsx";
 import Bounty from "../components/Bounty.jsx";
 import RouteMap from "../components/RouteMap.jsx";
+import { assignStopNumbers } from "../algorithm/routeMapData.js";
 
 const worker = new Worker(new URL("../algorithm/worker.js", import.meta.url), {
   type: "module",
@@ -39,6 +40,13 @@ const RoutePlanner = () => {
 
   const { detectiveMilestone, battleOfFortuneholdCompleted, roundTrip } =
     useSettings();
+
+  // Stop numbers for the actions list, from the same ordering as the map's
+  // numbered markers (see assignStopNumbers).
+  const stopNumbers = useMemo(
+    () => (result?.actions ? assignStopNumbers(result.actions) : []),
+    [result],
+  );
 
   useEffect(() => {
     worker.onmessage = (event) => {
@@ -221,6 +229,9 @@ const RoutePlanner = () => {
           <table className="w-full text-left rtl:text-right">
             <thead className="text-gray-900 dark:text-zinc-200 uppercase">
               <tr className="border-b border-gray-100 dark:border-zinc-700">
+                <th scope="col" className="py-3 min-w-[40px]">
+                  #
+                </th>
                 <th scope="col" className="py-3 min-w-[100px]">
                   Action
                 </th>
@@ -241,6 +252,7 @@ const RoutePlanner = () => {
                   key={index}
                   className="border-b border-gray-100 dark:border-zinc-700 last:border-none dark:text-zinc-200"
                 >
+                  <td className="py-3">{stopNumbers[index] ?? ""}</td>
                   <td className="py-3 capitalize">{action.type}</td>
                   <td className="py-3">
                     {action.item ? <Bounty bountyKey={action.item} /> : "-"}

@@ -221,6 +221,34 @@ export const buildRouteSteps = (
 };
 
 /**
+ * Numbers the buy/sell actions 1..N in action order for the actions list,
+ * matching the numbered markers on the map exactly. Teleport and Return
+ * actions get null (no number). An action at an unknown market, or at a
+ * market with no position (so the map cannot mark it either), gets null
+ * and does not consume a number.
+ * @param actions Actions from {@link pathfinder.findBestBounties}
+ * @param positions Node number -> [x, y] (defaults to {@link nodePositions})
+ * @returns {(number | null)[]} One entry per action, in action order
+ */
+export const assignStopNumbers = (actions, positions = nodePositions) => {
+  const marketByName = new Map(
+    Object.values(markets).map((market) => [market.name, market.node]),
+  );
+  let count = 0;
+  return actions.map((action) => {
+    if (action.type !== "buy" && action.type !== "sell") {
+      return null;
+    }
+    const node = marketByName.get(action.location);
+    if (node === undefined || !positions[node]) {
+      return null;
+    }
+    count += 1;
+    return count;
+  });
+};
+
+/**
  * Turns a pathfinder actions list into the geometry for a schematic route map.
  * @param actions Actions from {@link pathfinder.findBestBounties} (buy/sell/
  *   teleport/Return, each with a `location` market name)
@@ -248,7 +276,9 @@ export const buildRouteGeometry = (
   );
 
   // Stops: the bounty board, then each buy/sell market in action order,
-  // then the board again for the return trip.
+  // then the board again for the return trip. A market with no position
+  // is skipped before numbering, so the map's numbers never have gaps —
+  // the actions list numbers from the same ordering (see assignStopNumbers).
   const stops = [bountyBoard.node];
   const numberedStops = [];
   for (const action of actions) {
@@ -256,7 +286,7 @@ export const buildRouteGeometry = (
       continue;
     }
     const node = marketByName.get(action.location);
-    if (node === undefined) {
+    if (node === undefined || !positions[node]) {
       continue;
     }
     stops.push(node);
@@ -375,13 +405,11 @@ export const buildRouteGeometry = (
   const boardPosition = positions[bountyBoard.node];
   return {
     segments,
-    stops: numberedStops
-      .filter((stop) => positions[stop.node])
-      .map((stop) => ({
-        ...stop,
-        x: positions[stop.node][0],
-        y: positions[stop.node][1],
-      })),
+    stops: numberedStops.map((stop) => ({
+      ...stop,
+      x: positions[stop.node][0],
+      y: positions[stop.node][1],
+    })),
     start: boardPosition
       ? {
           node: bountyBoard.node,

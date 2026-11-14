@@ -544,8 +544,10 @@ export const edges = [
  * These are not graph edges yet: no shortcut has both endpoints verified to
  * a node number in the repo's data, so none can be added to `edges` without
  * guessing. Candidate endpoint nodes, from shop nodes in `markets` (the shop
- * sits in the named area); NOT verified — there is no current map to check
- * them against, so re-verify in-game before wiring an edge:
+ * sits in the named area). Areas confirmed against the wiki, which states
+ * the Cheese Shop is in Unicorn Farm and the Toy Stall is in Tanners Road;
+ * Bert's Gallery is a location in Crenopolis. There is no current map, so
+ * re-verify in-game before wiring an edge:
  *   Unicorn Farm -> 84 (Cheese Shop), Tanners Road -> 36 (Toy Stall),
  *   Bert's Gallery -> 57.
  * The other endpoints (Snag Alley, Sludge Street, Fillan's Living Room,

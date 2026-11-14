@@ -50,10 +50,12 @@ const additionalRooms = [
 
 const Configuration = () => {
   const {
+    merchantingMilestone,
     merchantingLevel,
     detectiveLevel,
     battleOfFortuneholdCompleted,
     roundTrip,
+    setMerchantingMilestone,
     setMerchantingLevel,
     setDetectiveLevel,
     setBattleOfFortuneholdCompleted,
@@ -65,20 +67,40 @@ const Configuration = () => {
       title="Configuration"
       meta="Settings for the tool are saved to your browser."
     >
-      <Subheading>Merchanting Level</Subheading>
+      <Subheading>Merchanting Milestone and Level</Subheading>
       <Paragraph>
-        Used to hide bounties that require a higher merchanting level. Leave
-        blank to show all bounties.
+        Used to hide bounties that require a higher merchanting milestone and
+        level. Leave the milestone blank to show all bounties.
       </Paragraph>
 
-      <input
-        value={merchantingLevel}
-        onChange={(e) => setMerchantingLevel(e.target.value)}
-        type="number"
-        min="0"
-        max="500"
-        className="mb-5 block p-2 text-gray-900 dark:text-white border border-gray-300 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800 sm:text-md focus:ring-blue-500 focus:border-blue-500"
-      />
+      <div className="flex gap-3 mb-5">
+        <label className="block">
+          <span className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+            Milestone
+          </span>
+          <input
+            value={merchantingMilestone}
+            onChange={(e) => setMerchantingMilestone(e.target.value)}
+            type="number"
+            min="0"
+            max="9"
+            className="block p-2 text-gray-900 dark:text-white border border-gray-300 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800 sm:text-md focus:ring-blue-500 focus:border-blue-500"
+          />
+        </label>
+        <label className="block">
+          <span className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+            Level
+          </span>
+          <input
+            value={merchantingLevel}
+            onChange={(e) => setMerchantingLevel(e.target.value)}
+            type="number"
+            min="0"
+            max="99"
+            className="block p-2 text-gray-900 dark:text-white border border-gray-300 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800 sm:text-md focus:ring-blue-500 focus:border-blue-500"
+          />
+        </label>
+      </div>
 
       <Subheading>Detective Level</Subheading>
       <Paragraph>

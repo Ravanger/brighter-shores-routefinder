@@ -24,7 +24,19 @@ const SelectBounties = () => {
     reset: resetAvailableBounties,
   } = useBounties("availableBountiesV2");
 
-  const { merchantingLevel } = useSettings();
+  const { merchantingMilestone, merchantingLevel } = useSettings();
+
+  const isBountyAvailable = (bounty) => {
+    const bountyDataEntry = bountyData[bounty.key];
+    if (merchantingMilestone === "") {
+      return true;
+    }
+    return (
+      bountyDataEntry.milestone < merchantingMilestone ||
+      (bountyDataEntry.milestone === merchantingMilestone &&
+        bountyDataEntry.level <= merchantingLevel)
+    );
+  };
 
   return (
     <Page
@@ -35,11 +47,10 @@ const SelectBounties = () => {
       <Paragraph className="mb-2 dark:text-zinc-300">
         Select bounties you currently have{" "}
         <span className="font-bold">(up to 6 total).</span> To see or hide
-        relevant bounties, change your merchanting level on the{" "}
-        <InternalLink to="/configuration">configuration page</InternalLink>. Not
-        all bounties have been discovered yet, so higher level ones may be
-        missing. Please help contribute by providing details about these
-        bounties in our{" "}
+        relevant bounties, change your merchanting milestone and level on the{" "}
+        <InternalLink to="/configuration">configuration page</InternalLink>.
+        Please help contribute by providing details about these bounties in
+        our{" "}
         <ExternalLink to="https://discord.gg/fcSYv9GPwJ">Discord</ExternalLink>,
         and we will get them added.
       </Paragraph>
@@ -50,13 +61,7 @@ const SelectBounties = () => {
         Clear selections
       </button>
       <div className="grid xs:grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 mb-7">
-        {bounties
-          .filter(
-            (bounty) =>
-              merchantingLevel === 0 ||
-              bountyData[bounty.key].level <= merchantingLevel,
-          )
-          .map((bounty) => (
+        {bounties.filter(isBountyAvailable).map((bounty) => (
             <SelectableBounty
               key={bounty.key}
               bountyKey={bounty.key}
@@ -81,13 +86,7 @@ const SelectBounties = () => {
         Clear selections
       </button>
       <div className="grid xs:grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 mb-5">
-        {availableBounties
-          .filter(
-            (bounty) =>
-              merchantingLevel === 0 ||
-              bountyData[bounty.key].level <= merchantingLevel,
-          )
-          .map((bounty) => (
+        {availableBounties.filter(isBountyAvailable).map((bounty) => (
             <SelectableBounty
               key={bounty.key}
               bountyKey={bounty.key}

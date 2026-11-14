@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 const defaultSettings = {
-  merchantingLevel: 100, // Intentionally defaulted for now since higher levels have no images yet.
+  // Milestone 1, level 0 is the new-scale equivalent of the old level 100
+  // default. Intentionally defaulted for now since higher levels have no images yet.
+  merchantingMilestone: 1,
+  merchantingLevel: 0,
   detectiveLevel: 0,
   battleOfFortuneholdCompleted: false,
   roundTrip: true,
@@ -10,11 +13,27 @@ const defaultSettings = {
 const useSettings = () => {
   const [settings, setSettings] = useState(() => {
     const settingsJson = localStorage.getItem("settings");
-    return settingsJson ? JSON.parse(settingsJson) : defaultSettings;
+    const storedSettings = settingsJson ? JSON.parse(settingsJson) : {};
+    if (storedSettings.merchantingMilestone === undefined) {
+      // Settings saved before milestones were introduced stored a single
+      // merchanting level number, which is not comparable to the new
+      // milestone/level pair, so fall back to the defaults for both.
+      return {
+        ...defaultSettings,
+        ...storedSettings,
+        merchantingMilestone: defaultSettings.merchantingMilestone,
+        merchantingLevel: defaultSettings.merchantingLevel,
+      };
+    }
+    return { ...defaultSettings, ...storedSettings };
   });
 
   useEffect(() => {
     localStorage.setItem("settings", JSON.stringify(settings));
+  }, [settings]);
+
+  const merchantingMilestone = useMemo(() => {
+    return settings.merchantingMilestone;
   }, [settings]);
 
   const merchantingLevel = useMemo(() => {
@@ -36,6 +55,14 @@ const useSettings = () => {
 
     return settings.roundTrip;
   }, [settings]);
+
+  const setMerchantingMilestone = (merchantingMilestone) => {
+    setSettings((settings) => ({
+      ...settings,
+      merchantingMilestone:
+        merchantingMilestone === "" ? "" : Number(merchantingMilestone),
+    }));
+  };
 
   const setMerchantingLevel = (merchantingLevel) => {
     setSettings((settings) => ({
@@ -66,10 +93,12 @@ const useSettings = () => {
   };
 
   return {
+    merchantingMilestone,
     merchantingLevel,
     detectiveLevel,
     battleOfFortuneholdCompleted,
     roundTrip,
+    setMerchantingMilestone,
     setMerchantingLevel,
     setDetectiveLevel,
     setBattleOfFortuneholdCompleted,

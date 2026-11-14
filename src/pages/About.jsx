@@ -80,12 +80,15 @@ const About = () => {
           </li>
         </ul>
         <Paragraph className="mt-5">
-          This tool is open source and the code is{" "}
+          This is a fork of the original RouteFinder by{" "}
           <ExternalLink to="https://github.com/bricefrisco/brighter-shores-routefinder">
+            bricefrisco
+          </ExternalLink>
+          , updated with current bounty data. This fork&apos;s code is{" "}
+          <ExternalLink to="https://github.com/Ravanger/brighter-shores-routefinder">
             available on GitHub
           </ExternalLink>
-          . Further technical details regarding how the tool works can be found
-          there. All code contributions are welcome!
+          . All code contributions are welcome!
         </Paragraph>
       </Paragraph>
     </Page>

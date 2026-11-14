@@ -2,6 +2,10 @@
 
 A tool for Brighter Shores which finds the best merchanting routes.
 
+## Credit
+
+This is a fork of [bricefrisco/brighter-shores-routefinder](https://github.com/bricefrisco/brighter-shores-routefinder), the original RouteFinder for Brighter Shores. This fork updates the bounty data to the game's current milestone/level system (all 54 bounties, with milestone and level requirements and current XP values from the [Brighter Shores wiki](https://brightershoreswiki.org/w/Trading_Game)) and fixes the route planner's XP sums.
+
 ## How it works
 Select bounties which you currently have, and the tool will use Dijkstra's algorithm to find the best possible paths 
 for you to take to complete each bounty.
@@ -62,7 +66,7 @@ Ensure you have NodeJS installed on your machine. You can download it from [here
 
 1. Clone the repository
     ```
-    git clone https://github.com/bricefrisco/brighter-shores-routefinder.git
+    git clone https://github.com/Ravanger/brighter-shores-routefinder.git
     ```
 
 2. Install the dependencies

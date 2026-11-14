@@ -12,7 +12,7 @@ const Footer = () => {
       </p>
       <p className="pt-1">
         Open source. View and improve the code on{" "}
-        <ExternalLink to="https://github.com/bricefrisco/brighter-shores-routefinder">
+        <ExternalLink to="https://github.com/Ravanger/brighter-shores-routefinder">
           Github.
         </ExternalLink>
       </p>

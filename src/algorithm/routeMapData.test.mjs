@@ -4,7 +4,6 @@ import {
   buildRouteGeometry,
   buildRouteSteps,
   flattenRoutePoints,
-  formatStepCaption,
   formatStopNumbers,
 } from "./routeMapData.js";
 
@@ -205,26 +204,4 @@ test("formats stop numbers as ranges", () => {
   assert.equal(formatStopNumbers([9, 10, 11]), "9–11");
   assert.equal(formatStopNumbers([4, 7]), "4, 7");
   assert.equal(formatStopNumbers([4, 5, 7]), "4–5, 7");
-});
-
-test("formats step captions, including teleports and the return", () => {
-  const geometry = buildRouteGeometry(sampleActions, 0, false, true);
-  const route = buildRouteSteps(geometry, sampleActions, true);
-
-  assert.equal(
-    formatStepCaption(route.steps, 0, 2),
-    "Start at Guild Bounty Board",
-  );
-  assert.equal(
-    formatStepCaption(route.steps, 1, 2),
-    "Step 1 of 2: Buy Carrots at Toy Stall",
-  );
-  assert.equal(
-    formatStepCaption(route.steps, 2, 2),
-    "Step 2 of 2: Teleport to Crenopolis Outskirts, then Sell Carrots at Cheese Shop",
-  );
-  assert.equal(
-    formatStepCaption(route.steps, 3, 2),
-    "Teleport to Crenopolis Market, then return to Guild Bounty Board",
-  );
 });

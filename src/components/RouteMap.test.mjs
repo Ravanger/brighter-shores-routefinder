@@ -5,8 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import RouteMap from "./RouteMap.jsx";
 
 // The Leaflet map itself is created in an effect, so the server render only
-// covers the container, controls, caption and legend. Tile and marker
-// rendering is client-side.
+// covers the container and legend. Tile and marker rendering is client-side.
 const sampleActions = [
   { type: "buy", item: "CARROTS", location: "Toy Stall", distance: 10 },
   { type: "teleport", location: "Crenopolis Market", distance: 18 },
@@ -17,7 +16,7 @@ const sampleActions = [
 const render = (props) =>
   renderToStaticMarkup(React.createElement(RouteMap, props));
 
-test("renders the map container with step controls, caption and legend", () => {
+test("renders the map container and legend, with no playback controls", () => {
   const html = render({
     actions: sampleActions,
     detectiveMilestone: 0,
@@ -27,11 +26,12 @@ test("renders the map container with step controls, caption and legend", () => {
 
   assert.match(html, /role="application"/); // map container
   assert.match(html, /aria-label="Route map"/);
-  assert.match(html, />Play</); // playback controls
-  assert.match(html, />Previous</);
-  assert.match(html, />Next</);
-  assert.match(html, />Replay</);
-  assert.match(html, /Start at Guild Bounty Board/); // step 0 caption
+  assert.doesNotMatch(html, />Play</); // animation removed: no controls
+  assert.doesNotMatch(html, />Pause</);
+  assert.doesNotMatch(html, />Previous</);
+  assert.doesNotMatch(html, />Next</);
+  assert.doesNotMatch(html, />Replay</);
+  assert.doesNotMatch(html, /Start at Guild Bounty Board/); // no step caption
   assert.match(html, /green dot is the start/); // legend
   assert.match(html, /a numbered circle is a stop/);
   assert.match(html, /a dashed line is a teleport/);

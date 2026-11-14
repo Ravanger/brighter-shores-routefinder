@@ -1,5 +1,4 @@
 import GPS from "./gps.js";
-import { bounties as bountyData } from "./bounties.js";
 import { bountyBoard, edges, markets, portals } from "./nodes.js";
 import { nodePositions } from "./nodePositions.js";
 import { bfTileToLatLng } from "./wikiMap.js";
@@ -219,44 +218,6 @@ export const buildRouteSteps = (
     [Math.max(...lats), Math.max(...lngs)],
   ];
   return { steps, places, routePoints, bounds };
-};
-
-/**
- * Caption for the step-through view. `index` is the 0-based step state
- * (0 = at the start); `total` is the number of buy/sell stops.
- * @param steps Steps from {@link buildRouteSteps}
- * @param index Current step state
- * @param total Number of buy/sell stops
- * @returns {string}
- */
-export const formatStepCaption = (steps, index, total) => {
-  if (index === 0) {
-    return `Start at ${bountyBoard.name}`;
-  }
-  const step = steps[index - 1];
-  if (!step) {
-    return "";
-  }
-  if (step.type === "Return") {
-    return step.teleport && step.portal
-      ? `Teleport to ${step.portal}, then return to ${step.location}`
-      : `Return to ${step.location}`;
-  }
-  const item =
-    step.item && bountyData[step.item]
-      ? bountyData[step.item].name
-      : step.item;
-  const action =
-    step.type === "buy"
-      ? `Buy ${item} at ${step.location}`
-      : `Sell ${item} at ${step.location}`;
-  const teleport =
-    step.teleport && step.portal
-      ? `Teleport to ${step.portal}, then `
-      : step.teleport
-        ? "Teleport, then "
-        : "";
-  return `Step ${step.number} of ${total}: ${teleport}${action}`;
 };
 
 /**

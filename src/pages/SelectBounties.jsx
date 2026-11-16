@@ -46,7 +46,8 @@ const SelectBounties = () => {
       <Subheading>Your bounties</Subheading>
       <Paragraph className="mb-2 dark:text-zinc-300">
         Select bounties you currently have{" "}
-        <span className="font-bold">(up to 6 total).</span> To see or hide
+        <span className="font-bold">(up to 6 total).</span> Left click to
+        increase the count, right click to decrease the count. To see or hide
         relevant bounties, change your merchanting milestone and level on the{" "}
         <InternalLink to="/configuration">configuration page</InternalLink>.
         Please help contribute by providing details about these bounties in
@@ -75,9 +76,10 @@ const SelectBounties = () => {
       <Paragraph className="mb-2 dark:text-zinc-300">
         If you only want to find the best route for your current bounties, you
         can skip these. Otherwise, you can wait for more bounties to be
-        available and select them here. The tool will calculate the best route
-        from all possible bounties and let you know which ones to abandon and
-        which ones to pick up.
+        available and select them here (left click to select, right click to
+        deselect). The tool will calculate the best route from all possible
+        bounties and let you know which ones to abandon and which ones to pick
+        up.
       </Paragraph>
       <button
         className={`text-blue-600 dark:text-blue-500 hover:underline font-medium text-sm mb-3 ${selectedAvailableBountiesCount === 0 ? "invisible" : ""}`}

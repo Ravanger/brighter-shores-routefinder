@@ -12,10 +12,18 @@ class GPS {
   #adjacencyMap;
   #cache;
 
-  constructor(detectiveMilestone, battleOfFortuneholdCompleted) {
+  constructor(
+    detectiveMilestone,
+    battleOfFortuneholdCompleted,
+    enabledCrimeDens = [],
+  ) {
     this.#adjacencyMap = new Map();
     this.#cache = new Map();
-    this.#buildAdjacencyMap(detectiveMilestone, battleOfFortuneholdCompleted);
+    this.#buildAdjacencyMap(
+      detectiveMilestone,
+      battleOfFortuneholdCompleted,
+      enabledCrimeDens,
+    );
   }
 
   /**
@@ -121,7 +129,11 @@ class GPS {
     neighbors.push([node2, weight]);
   }
 
-  #buildAdjacencyMap(detectiveMilestone, battleOfFortuneholdCompleted) {
+  #buildAdjacencyMap(
+    detectiveMilestone,
+    battleOfFortuneholdCompleted,
+    enabledCrimeDens,
+  ) {
     for (const edge of edges) {
       const [node1, node2] = edge.nodes;
 
@@ -134,6 +146,11 @@ class GPS {
       // If an edge requires a quest to be completed that is not yet complete, skip the edge
       // (Battle of Fortunehold is the only quest that affects the graph as of now)
       if (edge.quest && !battleOfFortuneholdCompleted) {
+        continue;
+      }
+
+      // If an edge goes through a crime den room whose den is not enabled, skip the edge
+      if (edge.crimeDen && !enabledCrimeDens.includes(edge.crimeDen)) {
         continue;
       }
 

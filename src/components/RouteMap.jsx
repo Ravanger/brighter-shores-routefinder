@@ -56,6 +56,7 @@ const RouteMap = ({
   battleOfFortuneholdCompleted,
   roundTrip,
   expressBountyBoard = false,
+  enabledCrimeDens = [],
   positions = nodePositions,
 }) => {
   const board = expressBountyBoard ? expressBoard : bountyBoard;
@@ -68,6 +69,7 @@ const RouteMap = ({
         roundTrip,
         positions,
         board,
+        enabledCrimeDens,
       ),
     [
       actions,
@@ -76,6 +78,7 @@ const RouteMap = ({
       roundTrip,
       positions,
       board,
+      enabledCrimeDens,
     ],
   );
   const route = useMemo(

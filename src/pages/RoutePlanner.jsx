@@ -8,6 +8,7 @@ import InternalLink from "../components/InternalLink.jsx";
 import Bounty from "../components/Bounty.jsx";
 import RouteMap from "../components/RouteMap.jsx";
 import { assignStopNumbers } from "../algorithm/routeMapData.js";
+import { getEnabledCrimeDens } from "../algorithm/nodes.js";
 
 const worker = new Worker(new URL("../algorithm/worker.js", import.meta.url), {
   type: "module",
@@ -40,10 +41,19 @@ const RoutePlanner = () => {
 
   const {
     detectiveMilestone,
+    detectiveLevel,
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard,
+    crimeDens,
   } = useSettings();
+
+  // The crime dens whose rooms can be routed through: ticked by the player
+  // and meeting the Detective requirement (see getEnabledCrimeDens).
+  const enabledCrimeDens = useMemo(
+    () => getEnabledCrimeDens(crimeDens, detectiveMilestone, detectiveLevel),
+    [crimeDens, detectiveMilestone, detectiveLevel],
+  );
 
   // Stop numbers for the actions list, from the same ordering as the map's
   // numbered markers (see assignStopNumbers).
@@ -89,6 +99,7 @@ const RoutePlanner = () => {
       battleOfFortuneholdCompleted,
       roundTrip,
       expressBountyBoard,
+      enabledCrimeDens,
     };
 
     console.log("message", message);
@@ -101,6 +112,7 @@ const RoutePlanner = () => {
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard,
+    enabledCrimeDens,
   ]);
 
   const bountiesToAbandon = useMemo(() => {
@@ -228,6 +240,7 @@ const RoutePlanner = () => {
           battleOfFortuneholdCompleted={battleOfFortuneholdCompleted}
           roundTrip={roundTrip}
           expressBountyBoard={expressBountyBoard}
+          enabledCrimeDens={enabledCrimeDens}
         />
       ) : null}
 

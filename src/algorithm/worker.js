@@ -14,6 +14,7 @@ onmessage = (event) => {
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard,
+    enabledCrimeDens,
   } = event.data;
 
   const result = pathfinder.findBestBounties(
@@ -23,6 +24,7 @@ onmessage = (event) => {
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard,
+    enabledCrimeDens,
   );
 
   postMessage(result);

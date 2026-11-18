@@ -10,6 +10,9 @@ export const defaultSettings = {
   // milestone 5, so the level is stored for display and future gates.
   detectiveMilestone: 0,
   detectiveLevel: 0,
+  // Off by default: the tool cannot know the player's combat level, which
+  // is needed to clear a den.
+  crimeDens: {},
   battleOfFortuneholdCompleted: false,
   roundTrip: true,
   // The Express Bounty Board in the South Player Market needs The Imposter
@@ -74,6 +77,10 @@ const useSettings = () => {
     return settings.expressBountyBoard ?? false;
   }, [settings]);
 
+  const crimeDens = useMemo(() => {
+    return settings.crimeDens ?? {};
+  }, [settings]);
+
   const setMerchantingMilestone = (merchantingMilestone) => {
     setSettings((settings) => ({
       ...settings,
@@ -125,6 +132,13 @@ const useSettings = () => {
     }));
   };
 
+  const setCrimeDenEnabled = (key, enabled) => {
+    setSettings((settings) => ({
+      ...settings,
+      crimeDens: { ...(settings.crimeDens ?? {}), [key]: enabled },
+    }));
+  };
+
   return {
     merchantingMilestone,
     merchantingLevel,
@@ -133,6 +147,7 @@ const useSettings = () => {
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard,
+    crimeDens,
     setMerchantingMilestone,
     setMerchantingLevel,
     setDetectiveMilestone,
@@ -140,6 +155,7 @@ const useSettings = () => {
     setBattleOfFortuneholdCompleted,
     setRoundTrip,
     setExpressBountyBoard,
+    setCrimeDenEnabled,
   };
 };
 

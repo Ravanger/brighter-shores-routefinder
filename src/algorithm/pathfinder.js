@@ -28,6 +28,7 @@ class Pathfinder {
    * @param battleOfFortuneholdCompleted Whether the player has completed the Battle of Fortunehold quest which unlocks an additional room
    * @param roundTrip Whether to return to the bounty board after completing all deliveries
    * @param expressBountyBoard Whether to start at the Express Bounty Board in the South Player Market instead of the Guild Bounty Board
+   * @param enabledCrimeDens Keys from {@link crimeDens} the player has unlocked and can clear (see {@link getEnabledCrimeDens})
    * @returns {
    *     {bounties: string[]},    // An array of keys from {@link bountyData} representing the best bounties to complete
    *     {actions:    string[]},  // An array of actions to take to complete the deliveries
@@ -41,6 +42,7 @@ class Pathfinder {
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard = false,
+    enabledCrimeDens = [],
   ) {
     const result = {
       bounties: [],
@@ -49,7 +51,11 @@ class Pathfinder {
       experience: 0,
     };
 
-    const gps = new GPS(detectiveMilestone, battleOfFortuneholdCompleted);
+    const gps = new GPS(
+      detectiveMilestone,
+      battleOfFortuneholdCompleted,
+      enabledCrimeDens,
+    );
     const board = expressBountyBoard ? expressBoard : bountyBoard;
 
     const allBounties = [...currentBounties, ...availableBounties];

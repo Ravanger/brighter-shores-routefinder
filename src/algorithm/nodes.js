@@ -170,6 +170,10 @@ export const markets = {
  * unlock at the start of a milestone, so only the milestone matters, not the
  * within-milestone level.
  *
+ * `crimeDen` edges go through a Crime Den Raid room (see `crimeDens`). An
+ * edge is only usable when that den is in the enabled list passed to GPS
+ * (see `getEnabledCrimeDens`).
+ *
  * `quest` edges are paths that require a quest to be completed to travel through.
  *
  * `portal` edges are paths that connect to a portal stone.
@@ -293,6 +297,7 @@ export const edges = [
   { nodes: [28, 33], weight: 4.82 },
   { nodes: [28, 94], weight: 8.39 },
 
+  { nodes: [29, 30], weight: 100, crimeDen: "SMUGGLERS" },
   { nodes: [29, 94], weight: 7.5 },
 
   { nodes: [30, 31], weight: 4.77 },
@@ -304,6 +309,7 @@ export const edges = [
   { nodes: [31, 104], weight: 2.44 },
 
   { nodes: [32, 34], weight: 3.71 },
+  { nodes: [32, 33], weight: 4.07, crimeDen: "SMUGGLERS" },
   { nodes: [32, 104], weight: 2.2 },
 
   { nodes: [33, 94], weight: 4.27 },
@@ -363,12 +369,14 @@ export const edges = [
   // { nodes: [48, 93] }, Not needed
 
   // { nodes: [49, 52] }, Not needed
+  { nodes: [49, 50], weight: 100, crimeDen: "BURGLARS" },
 
   // { nodes: [50, 51] }, Not needed
   { nodes: [50, 56], weight: 6.87 },
   { nodes: [50, 59], weight: 4.4 },
   { nodes: [50, 100], weight: 7.12 },
 
+  { nodes: [51, 52], weight: 4.43, crimeDen: "BURGLARS" },
   { nodes: [51, 56], weight: 6.34 },
   { nodes: [51, 59], weight: 6.3 },
   { nodes: [51, 100], weight: 7.29 },
@@ -407,11 +415,13 @@ export const edges = [
 
   { nodes: [61, 95], weight: 4.6 },
 
+  { nodes: [62, 63], weight: 6.62, crimeDen: "COUNTERFEITERS" },
 
   // { nodes: [63, 65] }, Not needed
   { nodes: [63, 67], weight: 5.06 },
   { nodes: [63, 101], weight: 6.77 },
 
+  { nodes: [64, 65], weight: 100, crimeDen: "COUNTERFEITERS" },
   { nodes: [64, 97], weight: 2.7 },
   { nodes: [64, 99], weight: 6.61 },
 
@@ -529,21 +539,25 @@ export const edges = [
     quest: "BATTLE_OF_FORTUNEHOLD",
   },
 
+  { nodes: [107, 108], weight: 3.19, crimeDen: "MUGGERS" },
   // { nodes: [107, 109] }, Not needed
   { nodes: [107, 111], weight: 5.34 },
 
   // { nodes: [108, 110] }, Not needed
   { nodes: [108, 112], weight: 4.94 },
 
+  { nodes: [109, 110], weight: 2.57, crimeDen: "MUGGERS" },
   { nodes: [109, 111], weight: 7.85 },
 
   { nodes: [110, 112], weight: 2.79 },
 
+  { nodes: [113, 114], weight: 2.97, crimeDen: "GANGSTERS" },
   // { nodes: [113, 116] }, Not needed
 
   // { nodes: [114, 115] }, Not needed
   { nodes: [114, 117], weight: 6.49 },
 
+  { nodes: [115, 116], weight: 6.1, crimeDen: "GANGSTERS" },
   { nodes: [115, 117], weight: 5.42 },
 ];
 
@@ -584,3 +598,116 @@ export const cityShortcuts = [
     rooms: ["Council Office", "The Frog and Barnacle"],
   },
 ];
+
+/**
+ * Crime Den Raids are Detective activities in Crenopolis: five dens, each
+ * with two rooms. Once a den's rooms have been raided they become a shortcut
+ * between the two streets it connects (the corresponding `edges` entries
+ * carry `crimeDen`).
+ * An edge is only usable when the player's Detective milestone and level
+ * meet the den's requirement AND the player has ticked the den in
+ * Configuration, because clearing a den needs combat level too.
+ * Source: https://brightershoreswiki.org/w/Crime_Den_Raids
+ */
+export const crimeDens = [
+  {
+    key: "SMUGGLERS",
+    name: "Smugglers",
+    milestone: 0,
+    level: 28,
+    rooms: ["Geld Family Residence", "Geld Family Logistics"],
+    connects: ["Waterfront Market", "Thimble Lane"],
+  },
+  {
+    key: "COUNTERFEITERS",
+    name: "Counterfeiters",
+    milestone: 1,
+    level: 33,
+    rooms: ["Dilapidated Warehouse", "Slant Street Cart House"],
+    connects: ["West Player Market", "Slant Street"],
+  },
+  {
+    key: "BURGLARS",
+    name: "Burglars",
+    milestone: 2,
+    level: 33,
+    rooms: ["Market Chambers", "Oscen's Warehouse"],
+    connects: ["South Player Market", "Ratmore Road"],
+  },
+  {
+    key: "MUGGERS",
+    name: "Muggers",
+    milestone: 3,
+    level: 33,
+    rooms: ["Four Winds Backroom", "Four Winds Side Room"],
+    connects: ["Four Winds Bar", "Snag Alley"],
+  },
+  {
+    key: "GANGSTERS",
+    name: "Gangsters",
+    milestone: 4,
+    level: 33,
+    rooms: ["Gillad's House", "The Quill Club"],
+    connects: ["Peacock Road Central", "Dawkin Court"],
+  },
+];
+
+/**
+ * Whether a Detective milestone and level meet a den's requirement. The same
+ * comparison as {@link getEnabledCrimeDens} uses for bounties (see
+ * `isBountyAvailable` in SelectBounties): a higher milestone beats any level
+ * within it. Empty, undefined and null inputs count as 0, matching the
+ * settings inputs while a field is blank.
+ * @param den A den from {@link crimeDens}
+ * @param detectiveMilestone The player's Detective milestone (0-9)
+ * @param detectiveLevel The player's level within the milestone (0-99)
+ * @returns {boolean} True if the requirement is met
+ */
+export const meetsCrimeDenRequirement = (
+  den,
+  detectiveMilestone,
+  detectiveLevel,
+) => {
+  const milestone =
+    detectiveMilestone === "" ||
+    detectiveMilestone === undefined ||
+    detectiveMilestone === null
+      ? 0
+      : detectiveMilestone;
+  const level =
+    detectiveLevel === "" ||
+    detectiveLevel === undefined ||
+    detectiveLevel === null
+      ? 0
+      : detectiveLevel;
+
+  return (
+    den.milestone < milestone ||
+    (den.milestone === milestone && den.level <= level)
+  );
+};
+
+/**
+ * Determines which crime dens are usable as shortcuts: the den is ticked by
+ * the player and its Detective requirement is met.
+ * @param crimeDenToggles Object of { [key from {@link crimeDens}]: boolean }
+ *   The player's per-den "I can clear this den" toggles; a missing key is off.
+ * @param detectiveMilestone The player's Detective milestone (0-9)
+ * @param detectiveLevel The player's level within the milestone (0-99)
+ * @returns {string[]} Keys from {@link crimeDens} whose edges may be used
+ */
+export const getEnabledCrimeDens = (
+  crimeDenToggles,
+  detectiveMilestone,
+  detectiveLevel,
+) => {
+  const toggles = crimeDenToggles ?? {};
+  return crimeDens
+    .filter(
+      (den) =>
+        toggles[den.key] === true &&
+        meetsCrimeDenRequirement(den, detectiveMilestone, detectiveLevel),
+    )
+    .map((den) => den.key);
+};
+

@@ -258,6 +258,7 @@ export const assignStopNumbers = (actions, positions = nodePositions) => {
  * @param positions Node number -> [x, y] (defaults to {@link nodePositions})
  * @param board The bounty board the route starts at ({@link bountyBoard} or
  *   {@link expressBountyBoard})
+ * @param enabledCrimeDens Keys from {@link crimeDens} the player has unlocked and can clear (see {@link getEnabledCrimeDens})
  * @returns {{
  *   segments: {points: number[][], dashed: boolean}[],
  *   stops: {node: number, label: string, number: number, x: number, y: number}[],
@@ -273,6 +274,7 @@ export const buildRouteGeometry = (
   roundTrip,
   positions = nodePositions,
   board = bountyBoard,
+  enabledCrimeDens = [],
 ) => {
   const marketByName = new Map(
     Object.values(markets).map((market) => [market.name, market.node]),
@@ -315,7 +317,11 @@ export const buildRouteGeometry = (
     detectiveMilestone === null
       ? 0
       : detectiveMilestone;
-  const gps = new GPS(milestone, battleOfFortuneholdCompleted);
+  const gps = new GPS(
+    milestone,
+    battleOfFortuneholdCompleted,
+    enabledCrimeDens,
+  );
   const adjacency = buildAdjacency();
 
   // The true node-by-node path, legs concatenated (shared join node deduped).

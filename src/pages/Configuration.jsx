@@ -2,7 +2,11 @@ import Page from "../components/Page.jsx";
 import Paragraph from "../components/Paragraph.jsx";
 import Subheading from "../components/Subheading.jsx";
 import useSettings from "../hooks/useSettings.js";
-import { cityShortcuts } from "../algorithm/nodes.js";
+import {
+  cityShortcuts,
+  crimeDens as crimeDenList,
+  meetsCrimeDenRequirement,
+} from "../algorithm/nodes.js";
 
 const Configuration = () => {
   const {
@@ -13,6 +17,7 @@ const Configuration = () => {
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard,
+    crimeDens,
     setMerchantingMilestone,
     setMerchantingLevel,
     setDetectiveMilestone,
@@ -20,6 +25,7 @@ const Configuration = () => {
     setBattleOfFortuneholdCompleted,
     setRoundTrip,
     setExpressBountyBoard,
+    setCrimeDenEnabled,
   } = useSettings();
 
   return (
@@ -112,6 +118,49 @@ const Configuration = () => {
           )}
         </ul>
       </Paragraph>
+
+      <Subheading>Crime Den Raids</Subheading>
+      <Paragraph>
+        Raiding a crime den opens its rooms as a shortcut through Crenopolis.
+        Each den needs the Detective level shown, and you must also be able to
+        defeat its 5 enemies, which are about 75 levels above that requirement.
+        Only tick the dens you can clear. The tool will not route through the
+        others.
+      </Paragraph>
+
+      {crimeDenList.map((den) => {
+        const meetsRequirement = meetsCrimeDenRequirement(
+          den,
+          detectiveMilestone,
+          detectiveLevel,
+        );
+        return (
+          <div key={den.key} className="flex items-center mb-4 select-none">
+            <input
+              id={`crime-den-${den.key.toLowerCase()}`}
+              type="checkbox"
+              checked={crimeDens[den.key] === true}
+              disabled={!meetsRequirement}
+              onChange={(e) => setCrimeDenEnabled(den.key, e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+            />
+            <label
+              htmlFor={`crime-den-${den.key.toLowerCase()}`}
+              className={`ms-2 text-sm font-medium text-gray-900 dark:text-white cursor-pointer ${meetsRequirement ? "" : "opacity-50"}`}
+            >
+              {den.name}: {den.connects.join(" ↔ ")} (milestone {den.milestone}
+              , level {den.level})
+              {!meetsRequirement && (
+                <span className="text-xs">
+                  {" "}
+                  — requires Detective milestone {den.milestone}, level{" "}
+                  {den.level}
+                </span>
+              )}
+            </label>
+          </div>
+        );
+      })}
 
       <Subheading>Quests</Subheading>
       <Paragraph>

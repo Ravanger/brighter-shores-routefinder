@@ -37,3 +37,36 @@ test("starts at the Express Bounty Board and returns there when enabled", () => 
   const ret = result.actions.find((action) => action.type === "Return");
   assert.equal(ret.location, "Express Bounty Board");
 });
+
+// HOMESPUN_CLOTH: buy at the Textiles Stall (104), sell at the Clock Stall
+// (26). The walk between them crosses the Smugglers den edge [32, 33], so
+// enabling the den shortens the route.
+test("routes through enabled crime dens", () => {
+  const without = pathfinder.findBestBounties(
+    ["HOMESPUN_CLOTH"],
+    [],
+    0,
+    false,
+    true,
+  );
+  const withSmugglers = pathfinder.findBestBounties(
+    ["HOMESPUN_CLOTH"],
+    [],
+    0,
+    false,
+    true,
+    false,
+    ["SMUGGLERS"],
+  );
+
+  assert.ok(withSmugglers.distance < without.distance);
+
+  // Tolerance: the leg is a difference of two accumulated floating-point
+  // sums, which does not always round identically to the direct sum.
+  const gps = new GPS(0, false, ["SMUGGLERS"]);
+  const buy = withSmugglers.actions.find((action) => action.type === "buy");
+  const sell = withSmugglers.actions.find((action) => action.type === "sell");
+  const leg = gps.distance(104, 26).distance + 4;
+  assert.ok(Math.abs(sell.distance - buy.distance - leg) < 1e-9);
+});
+

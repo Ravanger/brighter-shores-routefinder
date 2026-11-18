@@ -2,9 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import GPS from "./gps.js";
 import pathfinder from "./pathfinder.js";
-import { buildRouteGeometry, buildShortcutLines } from "./routeMapData.js";
+import { buildRouteGeometry } from "./routeMapData.js";
 import { cityShortcuts, edges } from "./nodes.js";
-import { nodePositions, shortcutSpotPositions } from "./nodePositions.js";
+import { nodePositions } from "./nodePositions.js";
 
 test("cityShortcut edges match the cityShortcuts table", () => {
   const shortcutEdges = edges.filter((edge) => edge.cityShortcut);
@@ -15,6 +15,11 @@ test("cityShortcut edges match the cityShortcuts table", () => {
     assert.equal(edge.detectiveMilestone, shortcut.milestone);
     // The weight is the ~2s teleport itself.
     assert.equal(edge.weight, 2);
+    // The table's endpoint nodes are the edge's nodes, in edge order.
+    assert.deepEqual(
+      shortcut.endpoints.map((endpoint) => endpoint.node),
+      edge.nodes,
+    );
   }
 });
 
@@ -70,18 +75,22 @@ test("pathfinder labels a shortcut crossing as its own travel step", () => {
   assert.ok(locked.distance > unlocked.distance);
 });
 
-// A buy at the Cheese Shop (node 84) from the Guild board (103): at
-// milestone 5 the leg 107 -> 84 is the Cellar teleport, drawn as a dashed
-// segment between the two endpoints' positions; at milestone 4 it is not.
-test("shortcut legs are drawn as dashed segments on the route map", () => {
-  const actions = [{ type: "buy", item: "X", location: "Cheese Shop" }];
-  const from = nodePositions[107]; // Cellar spot in Snag Alley
-  const to = nodePositions[84]; // Cheese Shop
+// A route from Victor T Cyclops (8) to the Vase Stall (85): at milestone 5
+// the leg 120 -> 107 is the Cellar teleport, drawn as a shortcut segment
+// between the two endpoints' positions; at milestone 4 it is not.
+test("shortcut legs are drawn as shortcut segments on the route map", () => {
+  const actions = [
+    { type: "buy", item: "X", location: "Victor T Cyclops" },
+    { type: "sell", item: "X", location: "Vase Stall" },
+  ];
+  const from = nodePositions[120]; // Cellar spot in Unicorn Farm
+  const to = nodePositions[107]; // Cellar spot in Snag Alley
 
   const hasShortcutSegment = (geometry) =>
     geometry.segments.some(
       (segment) =>
-        segment.dashed &&
+        segment.kind === "shortcut" &&
+        segment.name === "Cellar" &&
         segment.points.length === 2 &&
         ((segment.points[0][0] === from[0] &&
           segment.points[0][1] === from[1] &&
@@ -93,38 +102,38 @@ test("shortcut legs are drawn as dashed segments on the route map", () => {
             segment.points[1][1] === from[1])),
     );
 
-  assert.ok(hasShortcutSegment(buildRouteGeometry(actions, 5, false, true)));
-  assert.ok(!hasShortcutSegment(buildRouteGeometry(actions, 4, false, true)));
-});
+  assert.ok(hasShortcutSegment(buildRouteGeometry(actions, 5, false, false)));
+  assert.ok(!hasShortcutSegment(buildRouteGeometry(actions, 4, false, false)));
 
-// The map draws one line per unlocked shortcut, between its two teleport
-// spots. Below a shortcut's milestone it is not drawn; an endpoint with no
-// recorded spot leaves nothing to draw.
-test("shortcut lines appear only once the shortcut is unlocked", () => {
-  assert.deepEqual(buildShortcutLines(4), []);
-
-  const m5 = buildShortcutLines(5);
-  assert.equal(m5.length, 1);
-  assert.deepEqual(m5[0], {
-    name: "Cellar",
-    points: [shortcutSpotPositions[84], shortcutSpotPositions[107]],
-  });
-
-  assert.equal(buildShortcutLines(9).length, 5);
-
-  const withoutSnagAlley = { ...shortcutSpotPositions };
-  delete withoutSnagAlley[107];
-  assert.deepEqual(buildShortcutLines(5, withoutSnagAlley), []);
+  // Jump stops: the Outskirts portal stone on the way out, plus both Cellar
+  // teleport spots (neither endpoint is a stop here).
+  assert.deepEqual(buildRouteGeometry(actions, 5, false, false).jumps, [
+    { kind: "teleport", name: "Crenopolis Outskirts", x: 293, y: 61 },
+    {
+      kind: "shortcut",
+      name: "Cellar",
+      x: nodePositions[120][0],
+      y: nodePositions[120][1],
+    },
+    {
+      kind: "shortcut",
+      name: "Cellar",
+      x: nodePositions[107][0],
+      y: nodePositions[107][1],
+    },
+  ]);
 });
 
 // A route that crosses the Cellar without stopping at either endpoint draws
-// the crossing as a dashed segment between the two teleport spots, with the
-// walks connecting to and from them. Below the milestone (4) the same route
-// never touches a spot.
+// the crossing as a shortcut segment between the two teleport spots, with
+// the walks connecting to and from them (the walk out passes through the
+// Cheese Shop on its way to the Unicorn Farm spot). The portal stone jump
+// earlier in the same route is a different kind of jump: "teleport", not
+// "shortcut". Below the milestone (4) the same route never touches a spot.
 test("a crossing route connects to and from the teleport spots", () => {
   const actions = [
     { type: "buy", item: "X", location: "Victor T Cyclops" },
-    { type: "sell", item: "X", location: "Butcher's Stall" },
+    { type: "sell", item: "X", location: "Greengrocers" },
   ];
 
   const unlocked = buildRouteGeometry(actions, 5, false, false);
@@ -134,17 +143,46 @@ test("a crossing route connects to and from the teleport spots", () => {
         [436, 42],
         [293, 61],
       ],
-      dashed: true,
+      kind: "teleport",
+      name: "Crenopolis Outskirts",
     },
     {
-      points: [[293, 61], [259, 53], shortcutSpotPositions[84]],
-      dashed: false,
+      points: [
+        [293, 61],
+        nodePositions[8],
+        nodePositions[84],
+        nodePositions[120],
+      ],
+      kind: "walk",
+      name: null,
     },
     {
-      points: [shortcutSpotPositions[84], shortcutSpotPositions[107]],
-      dashed: true,
+      points: [nodePositions[120], nodePositions[107]],
+      kind: "shortcut",
+      name: "Cellar",
     },
-    { points: [shortcutSpotPositions[107], [325, 48]], dashed: false },
+    {
+      points: [nodePositions[107], nodePositions[21]],
+      kind: "walk",
+      name: null,
+    },
+  ]);
+
+  // Jump stops: the portal stone plus both Cellar teleport spots.
+  assert.deepEqual(unlocked.jumps, [
+    { kind: "teleport", name: "Crenopolis Outskirts", x: 293, y: 61 },
+    {
+      kind: "shortcut",
+      name: "Cellar",
+      x: nodePositions[120][0],
+      y: nodePositions[120][1],
+    },
+    {
+      kind: "shortcut",
+      name: "Cellar",
+      x: nodePositions[107][0],
+      y: nodePositions[107][1],
+    },
   ]);
 
   const locked = buildRouteGeometry(actions, 4, false, false);
@@ -152,6 +190,6 @@ test("a crossing route connects to and from the teleport spots", () => {
     segments.some((segment) =>
       segment.points.some(([x, y]) => x === point[0] && y === point[1]),
     );
-  assert.ok(!touches(locked.segments, shortcutSpotPositions[84]));
-  assert.ok(!touches(locked.segments, shortcutSpotPositions[107]));
+  assert.ok(!touches(locked.segments, nodePositions[120]));
+  assert.ok(!touches(locked.segments, nodePositions[107]));
 });

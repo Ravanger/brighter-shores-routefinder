@@ -39,3 +39,57 @@
   display: block;
   font-size: 15px;
 }
+
+/* Hover tooltip on route jump legs (teleports and City Shortcut crossings):
+ * a dark pill that fades in over the tiles, readable in both light and dark
+ * themes. The type label is a small uppercase eyebrow tinted to match the
+ * leg's colour; the name is the shortcut or portal stone. The fade animates
+ * opacity only — Leaflet positions the tooltip with an inline transform, so
+ * animating transform would fight it. */
+.leaflet-tooltip.route-jump-tooltip {
+  animation: route-jump-tooltip-in 180ms ease-out;
+  background: rgba(24, 24, 27, 0.92);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  color: #fafafa;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+.leaflet-tooltip.route-jump-tooltip::before {
+  display: none;
+}
+
+.route-jump-tooltip .route-jump-type {
+  margin-right: 7px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.route-jump-tooltip--shortcut .route-jump-type {
+  color: #c4b5fd;
+}
+
+.route-jump-tooltip--teleport .route-jump-type {
+  color: #d4d4d8;
+}
+
+.route-jump-tooltip--den .route-jump-type {
+  color: #fca5a5;
+}
+
+@keyframes route-jump-tooltip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

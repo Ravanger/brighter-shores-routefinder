@@ -1,12 +1,14 @@
 // Fetches the Brighter Shores wiki's map data and writes
 // src/algorithm/nodePositions.js: a node number -> [x, y] map in wiki
 // in-game coords for every market, both bounty boards, the two portal
-// stones and the City Shortcut endpoint nodes without a marker of their
-// own (their position is the shortcut's map glyph in its room), plus
-// `shortcutSpotPositions`: the actual teleport spot (the shortcut's map
-// glyph) for all ten City Shortcut endpoint nodes. Also the ten crime den
-// rooms and the quest rooms, as graph nodes at their wiki polygon centres
-// (see `denRooms` and `questRooms` in src/algorithm/nodes.js).
+// stones and all ten City Shortcut endpoint nodes. The spot positions come
+// from MEASURED_SPOTS below (measured in-game; the wiki's map glyphs sit a
+// few units off the real teleport triggers), not from the wiki data. Also
+// The ten crime den rooms are graph nodes too (see `denRooms` in
+// src/algorithm/nodes.js): their positions are the wiki polygon centroids,
+// used for routing through raided dens and for the route map's debug
+// overlay. So are the quest rooms (see `questRooms`), whose passages open
+// when a quest is complete.
 //
 // Usage: node scripts/generateNodePositions.mjs
 //
@@ -97,24 +99,40 @@ const MAPPING = {
   },
 };
 
-// All ten City Shortcut endpoint nodes: each stands in for the teleport
-// spot on its side of the shortcut. The node numbers are the `cityShortcut`
-// edges in src/algorithm/nodes.js; the rooms are the shortcut's two
-// locations from the wiki variant pages. Every resolved spot is recorded in
-// `shortcutSpotPositions`; a spot also becomes a `nodePositions` entry when
-// the node has no marker of its own (a street or den-door node, not a
-// market).
+// All ten City Shortcut endpoint nodes: the four street endpoints and six
+// spot nodes (120-125) of the `cityShortcut` edges in
+// src/algorithm/nodes.js; the rooms are the shortcut's two locations from
+// the wiki variant pages. Used to resolve each endpoint to its map glyph in
+// a room (a cross-check against MEASURED_SPOTS, which is what
+// nodePositions.js actually gets).
 const SHORTCUT_SPOTS = [
-  { node: 26, shortcut: "Trapdoor", room: "The Frog and Barnacle" },
   { node: 48, shortcut: "Sewer", room: "Tanners Road" },
-  { node: 57, shortcut: "Painting", room: "Bert's Gallery" },
   { node: 67, shortcut: "Manhole", room: "Slant Street" },
-  { node: 71, shortcut: "Painting", room: "Fillan's Living Room" },
   { node: 80, shortcut: "Sewer", room: "Sludge Street" },
-  { node: 83, shortcut: "Trapdoor", room: "Council Office" },
-  { node: 84, shortcut: "Cellar", room: "Unicorn Farm" },
   { node: 107, shortcut: "Cellar", room: "Snag Alley" },
-  { node: 118, shortcut: "Manhole", room: "Dusty Nook" },
+  { node: 120, shortcut: "Cellar", room: "Unicorn Farm" },
+  { node: 121, shortcut: "Painting", room: "Fillan's Living Room" },
+  { node: 122, shortcut: "Manhole", room: "Dusty Nook" },
+  { node: 123, shortcut: "Trapdoor", room: "Council Office" },
+  { node: 124, shortcut: "Trapdoor", room: "The Frog and Barnacle" },
+  { node: 125, shortcut: "Painting", room: "Bert's Gallery" },
+];
+
+// The teleport spots measured in-game (2026-11-18). These override the
+// wiki's map glyphs for all ten City Shortcut endpoint nodes: the glyphs
+// sit a few units off the real teleport triggers, and routing walks to
+// these positions.
+const MEASURED_SPOTS = [
+  { node: 48, shortcut: "Sewer", room: "Tanners Road", position: [412, 97] },
+  { node: 67, shortcut: "Manhole", room: "Slant Street", position: [403, 20] },
+  { node: 80, shortcut: "Sewer", room: "Sludge Street", position: [346, 3] },
+  { node: 107, shortcut: "Cellar", room: "Snag Alley", position: [365, 58] },
+  { node: 120, shortcut: "Cellar", room: "Unicorn Farm", position: [245, 37] },
+  { node: 121, shortcut: "Painting", room: "Fillan's Living Room", position: [387, -29] },
+  { node: 122, shortcut: "Manhole", room: "Dusty Nook", position: [326, 72] },
+  { node: 123, shortcut: "Trapdoor", room: "Council Office", position: [440, 23] },
+  { node: 124, shortcut: "Trapdoor", room: "The Frog and Barnacle", position: [364, 97] },
+  { node: 125, shortcut: "Painting", room: "Bert's Gallery", position: [457, 50] },
 ];
 
 // The marker segments are stored in the map image's own coordinate space
@@ -540,12 +558,8 @@ const main = async () => {
     );
   }
   const marketEntries = resolvePositions(geojson);
-  const shortcuts = resolveShortcutEndpoints(geojson);
   const denRoomEntries = resolveDenRooms(geojson);
   const questRoomEntries = resolveQuestRooms(geojson);
-  // A spot only becomes a node position when the node has no marker of its
-  // own (a street or den-door node, not a market).
-  const marketNodes = new Set(Object.values(markets).map((m) => m.node));
   // The den room nodes (denRooms in src/algorithm/nodes.js) sit at their
   // rooms' wiki polygon centres. So do the quest room nodes (questRooms).
   const denNodeByRoom = new Map(
@@ -554,9 +568,16 @@ const main = async () => {
   const questNodeByRoom = new Map(
     questRooms.map((room) => [`${room.quest}:${room.room}`, room.node]),
   );
+  // The teleport spots are measured in-game (MEASURED_SPOTS), not taken
+  // from the wiki's map glyphs.
   const entries = [
     ...marketEntries.entries,
-    ...shortcuts.entries.filter((entry) => !marketNodes.has(entry.node)),
+    ...MEASURED_SPOTS.map((spot) => ({
+      name: spot.room,
+      node: spot.node,
+      position: spot.position,
+      note: `${spot.shortcut} City Shortcut spot (measured in-game)`,
+    })),
     ...denRoomEntries.entries.map((entry) => ({
       name: entry.room,
       node: denNodeByRoom.get(`${entry.den}:${entry.room}`),
@@ -572,7 +593,6 @@ const main = async () => {
   ].sort((a, b) => a.node - b.node);
   const unresolved = [
     ...marketEntries.unresolved,
-    ...shortcuts.unresolved,
     ...denRoomEntries.unresolved,
     ...questRoomEntries.unresolved,
     ...denRoomEntries.entries
@@ -605,17 +625,11 @@ const main = async () => {
 // Fetched: ${new Date().toISOString()}
 // Coordinates are wiki in-game [x, y], rounded to 2 decimals.
 // A position is the room centre (polygon centroid) unless the comment says
-// it is a shop marker (the shopkeeper NPC's marker inside the room) or a
-// City Shortcut glyph (the teleport spot for a shortcut endpoint node).
+// it is a shop marker (the shopkeeper NPC's marker inside the room), a
+// crime den room centre, a quest room centre, or a City Shortcut spot
+// (measured in-game; overrides the wiki's map glyph).
 export const nodePositions = {
 ${entries.map(formatEntry).join("\n")}
-};
-
-// The actual teleport spot (the shortcut's map glyph) for each of the ten
-// City Shortcut endpoint nodes. Market endpoints stand in at their marker
-// position above; these are where the teleports happen on the map.
-export const shortcutSpotPositions = {
-${shortcuts.entries.map(formatEntry).join("\n")}
 };
 `;
 

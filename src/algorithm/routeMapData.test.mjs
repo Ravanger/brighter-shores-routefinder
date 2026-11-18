@@ -35,13 +35,28 @@ test("builds numbered stops, the start marker and solid/dashed segments", () => 
 
   // Legs: board -> Toy Stall (walk), Toy Stall -> Cheese Shop (teleport via
   // the Outskirts portal stone), Cheese Shop -> board (teleport via the
-  // Market portal stone).
+  // Market portal stone). Jump legs carry the portal stone's name for the
+  // map's hover tooltip; walk legs carry null.
   assert.deepEqual(geometry.segments, [
-    { points: [[436, 42], [414, 93]], dashed: false },
-    { points: [[414, 93], [293, 61]], dashed: true },
-    { points: [[293, 61], [246, 49]], dashed: false },
-    { points: [[246, 49], [443, 61]], dashed: true },
-    { points: [[443, 61], [436, 42]], dashed: false },
+    { points: [[436, 42], [414, 93]], kind: "walk", name: null },
+    {
+      points: [[414, 93], [293, 61]],
+      kind: "teleport",
+      name: "Crenopolis Outskirts",
+    },
+    { points: [[293, 61], [246, 49]], kind: "walk", name: null },
+    {
+      points: [[246, 49], [443, 61]],
+      kind: "teleport",
+      name: "Crenopolis Market",
+    },
+    { points: [[443, 61], [436, 42]], kind: "walk", name: null },
+  ]);
+
+  // Jump stops: one dot per portal stone the route teleports through.
+  assert.deepEqual(geometry.jumps, [
+    { kind: "teleport", name: "Crenopolis Outskirts", x: 293, y: 61 },
+    { kind: "teleport", name: "Crenopolis Market", x: 443, y: 61 },
   ]);
 
   // Bounding box of the positioned nodes plus 24 units of padding.
@@ -69,11 +84,25 @@ test("starts at the Express Bounty Board when it is the board", () => {
   // The first leg leaves the Express board and the last returns to it; the
   // middle legs are unchanged from the Guild board route.
   assert.deepEqual(geometry.segments, [
-    { points: [[429, 50], [414, 93]], dashed: false },
-    { points: [[414, 93], [293, 61]], dashed: true },
-    { points: [[293, 61], [246, 49]], dashed: false },
-    { points: [[246, 49], [443, 61]], dashed: true },
-    { points: [[443, 61], [429, 50]], dashed: false },
+    { points: [[429, 50], [414, 93]], kind: "walk", name: null },
+    {
+      points: [[414, 93], [293, 61]],
+      kind: "teleport",
+      name: "Crenopolis Outskirts",
+    },
+    { points: [[293, 61], [246, 49]], kind: "walk", name: null },
+    {
+      points: [[246, 49], [443, 61]],
+      kind: "teleport",
+      name: "Crenopolis Market",
+    },
+    { points: [[443, 61], [429, 50]], kind: "walk", name: null },
+  ]);
+
+  // Same jump stops as the Guild board route.
+  assert.deepEqual(geometry.jumps, [
+    { kind: "teleport", name: "Crenopolis Outskirts", x: 293, y: 61 },
+    { kind: "teleport", name: "Crenopolis Market", x: 443, y: 61 },
   ]);
 
   const route = buildRouteSteps(geometry, sampleActions, true);
@@ -129,35 +158,62 @@ test("returns null when no stop has a position", () => {
   assert.equal(buildRouteGeometry(sampleActions, 0, false, true, {}), null);
 });
 
-test("flattens segments to ordered points, flagging teleport legs", () => {
+// A route that walks through a raided Muggers den marks the room it passes:
+// the walk line bends through the room's own node (here, the Four Winds
+// Backroom) and the dot sits at its position. With no den enabled the same
+// route takes the long way and marks nothing.
+test("den passages walked through are marked as dots on the map", () => {
+  const actions = [
+    { type: "buy", item: "X", location: "Victor T Cyclops" },
+    { type: "sell", item: "X", location: "Clock Stall" },
+  ];
+
+  const raided = buildRouteGeometry(
+    actions,
+    9,
+    true,
+    false,
+    undefined,
+    undefined,
+    ["MUGGERS"],
+  );
+  assert.deepEqual(raided.dens, [
+    { name: "Muggers", room: "Four Winds Backroom", x: 355.01, y: 59.09 },
+  ]);
+
+  assert.deepEqual(buildRouteGeometry(actions, 9, true, false).dens, []);
+});
+
+test("flattens segments to ordered points, carrying kind and name", () => {
   const geometry = buildRouteGeometry(sampleActions, 0, false, true);
 
   assert.deepEqual(flattenRoutePoints(geometry.segments), [
-    { x: 436, y: 42, dashed: false },
-    { x: 414, y: 93, dashed: false },
-    { x: 293, y: 61, dashed: true },
-    { x: 246, y: 49, dashed: false },
-    { x: 443, y: 61, dashed: true },
-    { x: 436, y: 42, dashed: false },
+    { x: 436, y: 42, kind: "walk", name: null },
+    { x: 414, y: 93, kind: "walk", name: null },
+    { x: 293, y: 61, kind: "teleport", name: "Crenopolis Outskirts" },
+    { x: 246, y: 49, kind: "walk", name: null },
+    { x: 443, y: 61, kind: "teleport", name: "Crenopolis Market" },
+    { x: 436, y: 42, kind: "walk", name: null },
   ]);
 });
 
 test("flattenRoutePoints skips duplicate join points and empty segments", () => {
   assert.deepEqual(
     flattenRoutePoints([
-      { points: [[1, 2]], dashed: false },
-      { points: [], dashed: true },
+      { points: [[1, 2]], kind: "walk", name: null },
+      { points: [], kind: "teleport", name: "Crenopolis Market" },
       {
         points: [
           [1, 2],
           [3, 4],
         ],
-        dashed: false,
+        kind: "walk",
+        name: null,
       },
     ]),
     [
-      { x: 1, y: 2, dashed: false },
-      { x: 3, y: 4, dashed: false },
+      { x: 1, y: 2, kind: "walk", name: null },
+      { x: 3, y: 4, kind: "walk", name: null },
     ],
   );
   assert.deepEqual(flattenRoutePoints([]), []);
@@ -214,12 +270,24 @@ test("builds steps, places, route points and bounds for the map", () => {
     { node: 84, label: "Cheese Shop", latLng: [49, 246], numbers: [2] },
   ]);
   assert.deepEqual(route.routePoints, [
-    { x: 436, y: 42, dashed: false, latLng: [42, 436] },
-    { x: 414, y: 93, dashed: false, latLng: [93, 414] },
-    { x: 293, y: 61, dashed: true, latLng: [61, 293] },
-    { x: 246, y: 49, dashed: false, latLng: [49, 246] },
-    { x: 443, y: 61, dashed: true, latLng: [61, 443] },
-    { x: 436, y: 42, dashed: false, latLng: [42, 436] },
+    { x: 436, y: 42, kind: "walk", name: null, latLng: [42, 436] },
+    { x: 414, y: 93, kind: "walk", name: null, latLng: [93, 414] },
+    {
+      x: 293,
+      y: 61,
+      kind: "teleport",
+      name: "Crenopolis Outskirts",
+      latLng: [61, 293],
+    },
+    { x: 246, y: 49, kind: "walk", name: null, latLng: [49, 246] },
+    {
+      x: 443,
+      y: 61,
+      kind: "teleport",
+      name: "Crenopolis Market",
+      latLng: [61, 443],
+    },
+    { x: 436, y: 42, kind: "walk", name: null, latLng: [42, 436] },
   ]);
   assert.deepEqual(route.bounds, [
     [42, 246],

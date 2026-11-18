@@ -600,30 +600,43 @@ export const edges = [
   { nodes: [116, 135], weight: 3.05, crimeDen: "GANGSTERS" },
   { nodes: [115, 117], weight: 5.42 },
 
+  // City Shortcut teleport spots: each spot is its own node (120-125) at
+  // its measured in-game position, with a short walk edge from the nearest
+  // market. Those six walk times are estimates at ~2.6 map units per
+  // second (the median speed of the measured edges) — re-measure in-game
+  // if a route looks off. The four street endpoints (107, 80, 48, 67) are
+  // already their own nodes, also at their measured spots.
+  { nodes: [84, 120], weight: 4.6 }, // Cheese Shop -> Unicorn Farm spot
+  { nodes: [57, 125], weight: 1.4 }, // Bert's Gallery -> its own spot
+  { nodes: [71, 121], weight: 4.8 }, // Monocle Market -> Fillan's Living Room spot
+  { nodes: [118, 122], weight: 3.4 }, // Cabbage Stall -> Dusty Nook spot
+  { nodes: [83, 123], weight: 7.1 }, // Henderson's Meat -> Council Office spot
+  { nodes: [26, 124], weight: 5.5 }, // Clock Stall -> The Frog and Barnacle spot
+
   // City Shortcuts are teleports between two rooms (see `cityShortcuts`),
   // unlocked at a Detective milestone; the walk to and from each spot is
-  // the surrounding edges, the weight is the teleport itself.
+  // the edges above, the weight is the teleport itself.
   {
-    nodes: [84, 107],
+    nodes: [120, 107],
     weight: 2,
     detectiveMilestone: 5,
     cityShortcut: "Cellar",
   },
   { nodes: [48, 80], weight: 2, detectiveMilestone: 6, cityShortcut: "Sewer" },
   {
-    nodes: [57, 71],
+    nodes: [125, 121],
     weight: 2,
     detectiveMilestone: 7,
     cityShortcut: "Painting",
   },
   {
-    nodes: [67, 118],
+    nodes: [67, 122],
     weight: 2,
     detectiveMilestone: 8,
     cityShortcut: "Manhole",
   },
   {
-    nodes: [26, 83],
+    nodes: [124, 123],
     weight: 2,
     detectiveMilestone: 9,
     cityShortcut: "Trapdoor",
@@ -640,34 +653,58 @@ export const edges = [
  * Source: https://brightershoreswiki.org/w/City_Shortcut (the individual
  * variant pages list each shortcut's two locations).
  *
- * Endpoint node numbers, from the wiki map gadget's shortcut marker
- * coordinates (MediaWiki:Gadget-leaflet-wiki.js) matched to this repo's
- * graph. The street endpoints without a market of their own (107, 80, 48,
- * 67) have their position set to the shortcut's map glyph in
- * nodePositions.js; the market endpoints stand in for their teleport spot
- * (the nearest node to the marker), so re-verify them in-game if a route
- * looks off. The actual teleport spots for all ten endpoints are recorded
- * in nodePositions.js `shortcutSpotPositions` (the map draws its shortcut
- * lines and crossing legs from there):
- *   Cellar     84 (Unicorn Farm) <-> 107 (Snag Alley)
- *   Sewer      80 (Sludge Street) <-> 48 (Tanners Road)
- *   Painting   71 (Fillan's Living Room) <-> 57 (Bert's Gallery)
- *   Manhole    118 (Dusty Nook) <-> 67 (Slant Street)
- *   Trapdoor   83 (Council Office) <-> 26 (The Frog and Barnacle)
+ * Every endpoint is its own graph node at its measured in-game position
+ * (nodePositions.js, measured 2026-11-18): the four street endpoints
+ * (107, 80, 48, 67) and six spot nodes (120-125), each of the latter
+ * connected to its nearest market by a short walk edge in `edges`. The
+ * wiki's map glyphs sit a few units off the real teleport triggers, so
+ * the measurements override them.
+ *   Cellar     120 (Unicorn Farm) <-> 107 (Snag Alley)
+ *   Sewer      48 (Tanners Road) <-> 80 (Sludge Street)
+ *   Painting   125 (Bert's Gallery) <-> 121 (Fillan's Living Room)
+ *   Manhole    67 (Slant Street) <-> 122 (Dusty Nook)
+ *   Trapdoor   124 (The Frog and Barnacle) <-> 123 (Council Office)
  */
 export const cityShortcuts = [
-  { name: "Cellar", milestone: 5, rooms: ["Unicorn Farm", "Snag Alley"] },
-  { name: "Sewer", milestone: 6, rooms: ["Sludge Street", "Tanners Road"] },
+  {
+    name: "Cellar",
+    milestone: 5,
+    endpoints: [
+      { node: 120, room: "Unicorn Farm" },
+      { node: 107, room: "Snag Alley" },
+    ],
+  },
+  {
+    name: "Sewer",
+    milestone: 6,
+    endpoints: [
+      { node: 48, room: "Tanners Road" },
+      { node: 80, room: "Sludge Street" },
+    ],
+  },
   {
     name: "Painting",
     milestone: 7,
-    rooms: ["Fillan's Living Room", "Bert's Gallery"],
+    endpoints: [
+      { node: 125, room: "Bert's Gallery" },
+      { node: 121, room: "Fillan's Living Room" },
+    ],
   },
-  { name: "Manhole", milestone: 8, rooms: ["Dusty Nook", "Slant Street"] },
+  {
+    name: "Manhole",
+    milestone: 8,
+    endpoints: [
+      { node: 67, room: "Slant Street" },
+      { node: 122, room: "Dusty Nook" },
+    ],
+  },
   {
     name: "Trapdoor",
     milestone: 9,
-    rooms: ["Council Office", "The Frog and Barnacle"],
+    endpoints: [
+      { node: 124, room: "The Frog and Barnacle" },
+      { node: 123, room: "Council Office" },
+    ],
   },
 ];
 

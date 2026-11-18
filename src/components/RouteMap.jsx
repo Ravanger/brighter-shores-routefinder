@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildRouteGeometry,
   buildRouteSteps,
-  buildShortcutLines,
   formatStopNumbers,
 } from "../algorithm/routeMapData.js";
 import { nodePositions } from "../algorithm/nodePositions.js";
-import { bountyBoard, expressBountyBoard as expressBoard } from "../algorithm/nodes.js";
+import {
+  bountyBoard,
+  expressBountyBoard as expressBoard,
+} from "../algorithm/nodes.js";
 import {
   WIKI_IMAGE_BOUNDS,
   WIKI_MAX_NATIVE_ZOOM,
@@ -86,10 +88,6 @@ const RouteMap = ({
     () =>
       geometry ? buildRouteSteps(geometry, actions, roundTrip, positions) : null,
     [geometry, actions, roundTrip, positions],
-  );
-  const shortcuts = useMemo(
-    () => buildShortcutLines(detectiveMilestone),
-    [detectiveMilestone],
   );
 
   const [leaflet, setLeaflet] = useState(null);
@@ -216,27 +214,66 @@ const RouteMap = ({
     layers.clearLayers();
     const { routePoints, places } = route;
 
-    // Unlocked City Shortcuts: dotted lines between their two spots, drawn
-    // before the route so the route stays on top.
-    for (const shortcut of shortcuts) {
-      const line = L.polyline(
-        shortcut.points.map(([x, y]) => wikiToLatLng([x, y])),
-        { color: "#7c3aed", weight: 3, dashArray: "2 6", opacity: 0.8 },
-      );
-      line.bindTooltip(shortcut.name, { sticky: true });
-      line.addTo(layers);
-    }
-
-    // Full route: solid for walking, dashed for teleports.
+    // Full route: solid for walking, dashed grey for teleports, dashed
+    // purple for City Shortcut crossings. Jump legs carry a hover tooltip
+    // naming the shortcut or portal stone (pill styling and fade-in live
+    // in index.css).
     for (let i = 1; i < routePoints.length; i++) {
       const a = routePoints[i - 1];
       const b = routePoints[i];
-      L.polyline(
-        [a.latLng, b.latLng],
-        b.dashed
-          ? { color: "#52525b", weight: 4, dashArray: "8 6" }
-          : { color: "#2563eb", weight: 4 },
-      ).addTo(layers);
+      const style =
+        b.kind === "shortcut"
+          ? { color: "#7c3aed", weight: 4, dashArray: "8 6" }
+          : b.kind === "teleport"
+            ? { color: "#52525b", weight: 4, dashArray: "8 6" }
+            : { color: "#2563eb", weight: 4 };
+      const line = L.polyline([a.latLng, b.latLng], style);
+      if (b.name) {
+        line.bindTooltip(
+          `<span class="route-jump-type">${
+            b.kind === "shortcut" ? "City Shortcut" : "Teleport"
+          }</span>${b.name}`,
+          {
+            sticky: true,
+            className: `route-jump-tooltip route-jump-tooltip--${b.kind}`,
+          },
+        );
+      }
+      line.addTo(layers);
+    }
+
+    // Jump stops: a plain dot at each portal stone and shortcut teleport
+    // spot the route uses (grey for teleports, purple for shortcuts).
+    // Drawn before the markers so a numbered stop on the same spot covers
+    // it.
+    for (const jump of geometry.jumps) {
+      L.circleMarker(wikiToLatLng([jump.x, jump.y]), {
+        radius: 5,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: jump.kind === "shortcut" ? "#7c3aed" : "#52525b",
+        fillOpacity: 1,
+        interactive: false,
+      }).addTo(layers);
+    }
+
+    // Crime den rooms the route walks through: a red dot at each room's own
+    // position (the walk line bends through it), with a hover pill naming
+    // the den and room. Drawn before the markers so a numbered stop on the
+    // same spot covers it.
+    for (const den of geometry.dens) {
+      const marker = L.circleMarker(wikiToLatLng([den.x, den.y]), {
+        radius: 5,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: "#dc2626",
+        fillOpacity: 1,
+      });
+      marker.bindTooltip(
+        `<span class="route-jump-type">Crime Den</span>${den.name} — ${den.room}`,
+        { className: "route-jump-tooltip route-jump-tooltip--den" },
+      );
+      marker.addTo(layers);
     }
 
     if (geometry.start) {
@@ -264,7 +301,7 @@ const RouteMap = ({
       });
       marker.addTo(layers);
     }
-  }, [leaflet, route, geometry, shortcuts]);
+  }, [leaflet, route, geometry]);
 
   if (!geometry || !route) {
     return null;

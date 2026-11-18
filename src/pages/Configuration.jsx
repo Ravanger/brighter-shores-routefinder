@@ -109,10 +109,10 @@ const Configuration = () => {
         <ul className="list-disc ml-5">
           {detectiveMilestone < 5 && <li className="mb-2">None.</li>}
           {cityShortcuts.map(
-            ({ milestone, name, rooms }) =>
+            ({ milestone, name, endpoints }) =>
               detectiveMilestone >= milestone && (
                 <li key={milestone} className="mb-2">
-                  {name}: {rooms.join(" and ")}{" "}
+                  {name}: {endpoints.map((endpoint) => endpoint.room).join(" and ")}{" "}
                 </li>
               ),
           )}

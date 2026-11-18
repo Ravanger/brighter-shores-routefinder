@@ -1,6 +1,6 @@
 import GPS from "./gps.js";
-import { bountyBoard, edges, markets, portals } from "./nodes.js";
-import { nodePositions, shortcutSpotPositions } from "./nodePositions.js";
+import { bountyBoard, crimeDens, denRooms, edges, markets, portals } from "./nodes.js";
+import { nodePositions } from "./nodePositions.js";
 import { wikiToLatLng } from "./wikiMap.js";
 
 const PADDING = 24;
@@ -8,7 +8,8 @@ const PADDING = 24;
 // Adjacency between nodes, respecting edge direction: a step a -> b is a
 // normal walk if an edge lists [a, b], or lists [b, a] and is undirected.
 // Anything else on a GPS path — a portal stone jump or a City Shortcut
-// teleport (edges carry `cityShortcut`) — is drawn as a dashed segment.
+// teleport (edges carry `cityShortcut`) — is a jump drawn as its own dashed
+// segment, tagged "teleport" or "shortcut" respectively.
 const buildAdjacency = () => {
   const adjacency = new Set();
   for (const edge of edges) {
@@ -26,10 +27,12 @@ const buildAdjacency = () => {
 
 /**
  * Flattens the segments from {@link buildRouteGeometry} into the ordered
- * positioned path nodes, in route order. Each point carries `dashed` when
- * the leg into it is a teleport jump. Shared join points appear once.
+ * positioned path nodes, in route order. Each point carries the `kind` of
+ * the leg into it ("walk", "teleport" or "shortcut") and its `name` (the
+ * shortcut or portal stone for jump legs, null for walks). Shared join
+ * points appear once.
  * @param segments Segments from {@link buildRouteGeometry}
- * @returns {{x: number, y: number, dashed: boolean}[]}
+ * @returns {{x: number, y: number, kind: string, name: string | null}[]}
  */
 export const flattenRoutePoints = (segments) => {
   const points = [];
@@ -39,7 +42,7 @@ export const flattenRoutePoints = (segments) => {
       if (last && last.x === x && last.y === y) {
         continue;
       }
-      points.push({ x, y, dashed: segment.dashed });
+      points.push({ x, y, kind: segment.kind, name: segment.name });
     }
   }
   return points;
@@ -85,7 +88,8 @@ export const formatStopNumbers = (numbers) => {
  *     latLng: number[], teleport: boolean, portal: string | null,
  *     pointIndex: number}[],
  *   places: {node: number, label: string, latLng: number[], numbers: number[]}[],
- *   routePoints: {x: number, y: number, dashed: boolean, latLng: number[]}[],
+ *   routePoints: {x: number, y: number, kind: string, name: string | null,
+ *     latLng: number[]}[],
  *   bounds: number[][]
  * } | null}
  */
@@ -126,7 +130,7 @@ export const buildRouteSteps = (
     let portal = null;
     if (toIdx !== -1) {
       for (let i = fromIdx + 1; i <= toIdx; i++) {
-        if (routePoints[i].dashed) {
+        if (routePoints[i].kind !== "walk") {
           teleport = true;
           if (portal === null) {
             portal =
@@ -253,42 +257,6 @@ export const assignStopNumbers = (actions, positions = nodePositions) => {
 };
 
 /**
- * The City Shortcut lines for the map: one line per shortcut unlocked at the
- * given Detective milestone, between its two teleport spots (where the
- * teleports happen on the map, not necessarily where the endpoint nodes'
- * markers are). A shortcut with an unrecorded spot is skipped (nothing to
- * draw).
- * @param detectiveMilestone The player's Detective milestone (0-9)
- * @param spots Node number -> [x, y] teleport spot (defaults to {@link shortcutSpotPositions})
- * @returns {{name: string, points: number[][]}[]}
- */
-export const buildShortcutLines = (
-  detectiveMilestone,
-  spots = shortcutSpotPositions,
-) => {
-  const milestone =
-    detectiveMilestone === "" ||
-    detectiveMilestone === undefined ||
-    detectiveMilestone === null
-      ? 0
-      : detectiveMilestone;
-  const lines = [];
-  for (const edge of edges) {
-    if (!edge.cityShortcut || edge.detectiveMilestone > milestone) {
-      continue;
-    }
-    const [a, b] = edge.nodes;
-    const spotA = spots[a];
-    const spotB = spots[b];
-    if (!spotA || !spotB) {
-      continue;
-    }
-    lines.push({ name: edge.cityShortcut, points: [spotA, spotB] });
-  }
-  return lines;
-};
-
-/**
  * Turns a pathfinder actions list into the geometry for a schematic route map.
  * @param actions Actions from {@link pathfinder.findBestBounties} (buy/sell/
  *   teleport/Return, each with a `location` market name)
@@ -300,7 +268,9 @@ export const buildShortcutLines = (
  *   {@link expressBountyBoard})
  * @param enabledCrimeDens Keys from {@link crimeDens} the player has unlocked and can clear (see {@link getEnabledCrimeDens})
  * @returns {{
- *   segments: {points: number[][], dashed: boolean}[],
+ *   segments: {points: number[][], kind: string, name: string | null}[],
+ *   jumps: {kind: string, name: string, x: number, y: number}[],
+ *   dens: {name: string, x: number, y: number}[],
  *   stops: {node: number, label: string, number: number, x: number, y: number}[],
  *   start: {node: number, label: string, x: number, y: number} | null,
  *   viewBox: number[]
@@ -363,18 +333,28 @@ export const buildRouteGeometry = (
     enabledCrimeDens,
   );
   const adjacency = buildAdjacency();
-  // The shortcut crossings themselves (both directions): a path step matching
-  // one of these is a teleport, not a walk.
-  const shortcutSteps = new Set();
+  // The shortcut crossings themselves (both directions), with their names:
+  // a path step matching one of these is a shortcut, not a walk.
+  const shortcutNames = new Map();
   for (const edge of edges) {
     if (!edge.cityShortcut) {
       continue;
     }
     const [a, b] = edge.nodes;
-    shortcutSteps.add(`${a}>${b}`);
-    shortcutSteps.add(`${b}>${a}`);
+    shortcutNames.set(`${a}>${b}`, edge.cityShortcut);
+    shortcutNames.set(`${b}>${a}`, edge.cityShortcut);
   }
-  const stopNodes = new Set(numberedStops.map((stop) => stop.node));
+  // Portal stones by node: a non-walk step that is not a shortcut crossing
+  // is a portal jump, and the stone is one of its endpoints; the jump's
+  // name is the stone's.
+  const portalByNode = new Map(
+    Object.values(portals).map((portal) => [portal.node, portal.name]),
+  );
+  // Den room nodes by number (see denRooms): a passage is two half-steps
+  // around its room node, so when the path steps onto one the walk line
+  // bends through the room's own position and the den dot is marked there.
+  const denRoomByNode = new Map(denRooms.map((room) => [room.node, room]));
+  const denNameByKey = new Map(crimeDens.map((den) => [den.key, den.name]));
 
   // The true node-by-node path, legs concatenated (shared join node deduped).
   // A leg that cannot be routed is skipped rather than breaking the map.
@@ -393,49 +373,118 @@ export const buildRouteGeometry = (
     }
   }
 
-  // Positioned nodes in path order. A step with no direct edge is a teleport
-  // jump; the flag carries forward across unpositioned nodes so the drawn
-  // segment spanning them is dashed. Unpositioned nodes are skipped. A
-  // shortcut crossing endpoint that is not a stop draws at its actual
-  // teleport spot, so the walk visibly connects to and from it; stops stay
-  // at their node position (the shop marker).
+  // Positioned nodes in path order. A step with no direct edge is a jump:
+  // a City Shortcut crossing or a portal stone teleport; the kind carries
+  // forward across unpositioned nodes so the drawn segment spanning them
+  // takes it. Unpositioned nodes are skipped. Every shortcut endpoint node
+  // sits at its actual teleport spot, so no special positioning is needed.
   const positioned = [];
-  let pendingTeleport = false;
+  // The teleport/shortcut nodes the route actually uses, for map markers:
+  // a portal jump marks the stone (one of the step's endpoints; the other
+  // end is a normal room), a shortcut marks both teleport spots.
+  const usedJumps = [];
+  // Den rooms the route walks through, for map markers: each sits at its
+  // own node position, so the walk line bends through the room.
+  const usedDens = [];
+  let pendingKind = null;
+  let pendingName = null;
   for (let i = 0; i < fullPath.length; i++) {
     const node = fullPath[i];
     if (i > 0 && !adjacency.has(`${fullPath[i - 1]}>${node}`)) {
-      pendingTeleport = true;
+      const shortcutName = shortcutNames.get(`${fullPath[i - 1]}>${node}`);
+      if (shortcutName) {
+        pendingKind = "shortcut";
+        pendingName = shortcutName;
+        usedJumps.push({
+          kind: "shortcut",
+          name: shortcutName,
+          nodes: [fullPath[i - 1], node],
+        });
+      } else {
+        pendingKind = "teleport";
+        pendingName =
+          portalByNode.get(fullPath[i - 1]) ?? portalByNode.get(node);
+        const stone = portalByNode.has(fullPath[i - 1])
+          ? fullPath[i - 1]
+          : node;
+        usedJumps.push({ kind: "teleport", name: pendingName, nodes: [stone] });
+      }
     }
-    const crosses = (x, y) => shortcutSteps.has(`${x}>${y}`);
-    const crossesShortcut =
-      (i > 0 && crosses(fullPath[i - 1], node)) ||
-      (i < fullPath.length - 1 && crosses(node, fullPath[i + 1]));
-    const position =
-      crossesShortcut && !stopNodes.has(node) && shortcutSpotPositions[node]
-        ? shortcutSpotPositions[node]
-        : positions[node];
+    const position = positions[node];
     if (!position) {
       continue;
+    }
+    const denRoom = denRoomByNode.get(node);
+    if (denRoom) {
+      usedDens.push({
+        name: denNameByKey.get(denRoom.den),
+        room: denRoom.room,
+        x: position[0],
+        y: position[1],
+      });
     }
     positioned.push({
       node,
       x: position[0],
       y: position[1],
-      teleport: pendingTeleport,
+      kind: pendingKind ?? "walk",
+      name: pendingName,
     });
-    pendingTeleport = false;
+    pendingKind = null;
+    pendingName = null;
   }
 
   if (positioned.length === 0) {
     return null;
   }
 
-  // Split into solid runs; each teleport jump is its own dashed segment.
+  // Jump stops for map markers: each portal stone the route teleports
+  // through, and both teleport spots of each City Shortcut crossing. Every
+  // endpoint sits at its own position (the measured spot), so no special
+  // resolution is needed. A jump crossed twice (round trip) is marked once.
+  const jumps = [];
+  const seenJumps = new Set();
+  for (const jump of usedJumps) {
+    for (const node of jump.nodes) {
+      const position = positions[node];
+      if (!position) {
+        continue;
+      }
+      const key = `${jump.kind}:${position[0]},${position[1]}`;
+      if (seenJumps.has(key)) {
+        continue;
+      }
+      seenJumps.add(key);
+      jumps.push({
+        kind: jump.kind,
+        name: jump.name,
+        x: position[0],
+        y: position[1],
+      });
+    }
+  }
+
+  // Den room markers, deduped: a round trip crossing the same passage both
+  // ways lands on the same room.
+  const dens = [];
+  const seenDens = new Set();
+  for (const den of usedDens) {
+    const key = `${den.room}:${den.x},${den.y}`;
+    if (seenDens.has(key)) {
+      continue;
+    }
+    seenDens.add(key);
+    dens.push(den);
+  }
+
+  // Split into walk runs; each jump is its own segment carrying the kind
+  // ("teleport" or "shortcut") and name (the shortcut or portal stone) of
+  // the leg into it. Walk segments carry a null name.
   const segments = [];
   let current = null;
   let previous = null;
   for (const point of positioned) {
-    if (point.teleport) {
+    if (point.kind !== "walk") {
       if (current && current.points.length > 1) {
         segments.push(current);
       }
@@ -445,13 +494,14 @@ export const buildRouteGeometry = (
             [previous.x, previous.y],
             [point.x, point.y],
           ],
-          dashed: true,
+          kind: point.kind,
+          name: point.name,
         });
       }
-      current = { points: [[point.x, point.y]], dashed: false };
+      current = { points: [[point.x, point.y]], kind: "walk", name: null };
     } else {
       if (!current) {
-        current = { points: [], dashed: false };
+        current = { points: [], kind: "walk", name: null };
       }
       current.points.push([point.x, point.y]);
     }
@@ -473,6 +523,8 @@ export const buildRouteGeometry = (
   const boardPosition = positions[board.node];
   return {
     segments,
+    jumps,
+    dens,
     stops: numberedStops.map((stop) => ({
       ...stop,
       x: positions[stop.node][0],

@@ -4,7 +4,7 @@ import GPS from "./gps.js";
 import pathfinder from "./pathfinder.js";
 import { buildRouteGeometry, buildShortcutLines } from "./routeMapData.js";
 import { cityShortcuts, edges } from "./nodes.js";
-import { nodePositions } from "./nodePositions.js";
+import { nodePositions, shortcutSpotPositions } from "./nodePositions.js";
 
 test("cityShortcut edges match the cityShortcuts table", () => {
   const shortcutEdges = edges.filter((edge) => edge.cityShortcut);
@@ -97,9 +97,9 @@ test("shortcut legs are drawn as dashed segments on the route map", () => {
   assert.ok(!hasShortcutSegment(buildRouteGeometry(actions, 4, false, true)));
 });
 
-// The map draws one line per unlocked shortcut, between the two endpoints'
-// positions. Below a shortcut's milestone it is not drawn; an endpoint with
-// no position leaves nothing to draw.
+// The map draws one line per unlocked shortcut, between its two teleport
+// spots. Below a shortcut's milestone it is not drawn; an endpoint with no
+// recorded spot leaves nothing to draw.
 test("shortcut lines appear only once the shortcut is unlocked", () => {
   assert.deepEqual(buildShortcutLines(4), []);
 
@@ -107,12 +107,51 @@ test("shortcut lines appear only once the shortcut is unlocked", () => {
   assert.equal(m5.length, 1);
   assert.deepEqual(m5[0], {
     name: "Cellar",
-    points: [nodePositions[84], nodePositions[107]],
+    points: [shortcutSpotPositions[84], shortcutSpotPositions[107]],
   });
 
   assert.equal(buildShortcutLines(9).length, 5);
 
-  const withoutSnagAlley = { ...nodePositions };
+  const withoutSnagAlley = { ...shortcutSpotPositions };
   delete withoutSnagAlley[107];
   assert.deepEqual(buildShortcutLines(5, withoutSnagAlley), []);
+});
+
+// A route that crosses the Cellar without stopping at either endpoint draws
+// the crossing as a dashed segment between the two teleport spots, with the
+// walks connecting to and from them. Below the milestone (4) the same route
+// never touches a spot.
+test("a crossing route connects to and from the teleport spots", () => {
+  const actions = [
+    { type: "buy", item: "X", location: "Victor T Cyclops" },
+    { type: "sell", item: "X", location: "Butcher's Stall" },
+  ];
+
+  const unlocked = buildRouteGeometry(actions, 5, false, false);
+  assert.deepEqual(unlocked.segments, [
+    {
+      points: [
+        [436, 42],
+        [293, 61],
+      ],
+      dashed: true,
+    },
+    {
+      points: [[293, 61], [259, 53], shortcutSpotPositions[84]],
+      dashed: false,
+    },
+    {
+      points: [shortcutSpotPositions[84], shortcutSpotPositions[107]],
+      dashed: true,
+    },
+    { points: [shortcutSpotPositions[107], [325, 48]], dashed: false },
+  ]);
+
+  const locked = buildRouteGeometry(actions, 4, false, false);
+  const touches = (segments, point) =>
+    segments.some((segment) =>
+      segment.points.some(([x, y]) => x === point[0] && y === point[1]),
+    );
+  assert.ok(!touches(locked.segments, shortcutSpotPositions[84]));
+  assert.ok(!touches(locked.segments, shortcutSpotPositions[107]));
 });

@@ -1,6 +1,6 @@
 import GPS from "./gps.js";
 import { bountyBoard, edges, markets, portals } from "./nodes.js";
-import { nodePositions } from "./nodePositions.js";
+import { nodePositions, shortcutSpotPositions } from "./nodePositions.js";
 import { wikiToLatLng } from "./wikiMap.js";
 
 const PADDING = 24;
@@ -254,15 +254,17 @@ export const assignStopNumbers = (actions, positions = nodePositions) => {
 
 /**
  * The City Shortcut lines for the map: one line per shortcut unlocked at the
- * given Detective milestone, between its two endpoint nodes' positions.
- * A shortcut with an unpositioned endpoint is skipped (nothing to draw).
+ * given Detective milestone, between its two teleport spots (where the
+ * teleports happen on the map, not necessarily where the endpoint nodes'
+ * markers are). A shortcut with an unrecorded spot is skipped (nothing to
+ * draw).
  * @param detectiveMilestone The player's Detective milestone (0-9)
- * @param positions Node number -> [x, y] (defaults to {@link nodePositions})
+ * @param spots Node number -> [x, y] teleport spot (defaults to {@link shortcutSpotPositions})
  * @returns {{name: string, points: number[][]}[]}
  */
 export const buildShortcutLines = (
   detectiveMilestone,
-  positions = nodePositions,
+  spots = shortcutSpotPositions,
 ) => {
   const milestone =
     detectiveMilestone === "" ||
@@ -276,12 +278,12 @@ export const buildShortcutLines = (
       continue;
     }
     const [a, b] = edge.nodes;
-    const positionA = positions[a];
-    const positionB = positions[b];
-    if (!positionA || !positionB) {
+    const spotA = spots[a];
+    const spotB = spots[b];
+    if (!spotA || !spotB) {
       continue;
     }
-    lines.push({ name: edge.cityShortcut, points: [positionA, positionB] });
+    lines.push({ name: edge.cityShortcut, points: [spotA, spotB] });
   }
   return lines;
 };
@@ -361,6 +363,18 @@ export const buildRouteGeometry = (
     enabledCrimeDens,
   );
   const adjacency = buildAdjacency();
+  // The shortcut crossings themselves (both directions): a path step matching
+  // one of these is a teleport, not a walk.
+  const shortcutSteps = new Set();
+  for (const edge of edges) {
+    if (!edge.cityShortcut) {
+      continue;
+    }
+    const [a, b] = edge.nodes;
+    shortcutSteps.add(`${a}>${b}`);
+    shortcutSteps.add(`${b}>${a}`);
+  }
+  const stopNodes = new Set(numberedStops.map((stop) => stop.node));
 
   // The true node-by-node path, legs concatenated (shared join node deduped).
   // A leg that cannot be routed is skipped rather than breaking the map.
@@ -381,7 +395,10 @@ export const buildRouteGeometry = (
 
   // Positioned nodes in path order. A step with no direct edge is a teleport
   // jump; the flag carries forward across unpositioned nodes so the drawn
-  // segment spanning them is dashed. Unpositioned nodes are skipped.
+  // segment spanning them is dashed. Unpositioned nodes are skipped. A
+  // shortcut crossing endpoint that is not a stop draws at its actual
+  // teleport spot, so the walk visibly connects to and from it; stops stay
+  // at their node position (the shop marker).
   const positioned = [];
   let pendingTeleport = false;
   for (let i = 0; i < fullPath.length; i++) {
@@ -389,7 +406,14 @@ export const buildRouteGeometry = (
     if (i > 0 && !adjacency.has(`${fullPath[i - 1]}>${node}`)) {
       pendingTeleport = true;
     }
-    const position = positions[node];
+    const crosses = (x, y) => shortcutSteps.has(`${x}>${y}`);
+    const crossesShortcut =
+      (i > 0 && crosses(fullPath[i - 1], node)) ||
+      (i < fullPath.length - 1 && crosses(node, fullPath[i + 1]));
+    const position =
+      crossesShortcut && !stopNodes.has(node) && shortcutSpotPositions[node]
+        ? shortcutSpotPositions[node]
+        : positions[node];
     if (!position) {
       continue;
     }

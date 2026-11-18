@@ -606,7 +606,9 @@ export const edges = [
  * 67) have their position set to the shortcut's map glyph in
  * nodePositions.js; the market endpoints stand in for their teleport spot
  * (the nearest node to the marker), so re-verify them in-game if a route
- * looks off:
+ * looks off. The actual teleport spots for all ten endpoints are recorded
+ * in nodePositions.js `shortcutSpotPositions` (the map draws its shortcut
+ * lines and crossing legs from there):
  *   Cellar     84 (Unicorn Farm) <-> 107 (Snag Alley)
  *   Sewer      80 (Sludge Street) <-> 48 (Tanners Road)
  *   Painting   71 (Fillan's Living Room) <-> 57 (Bert's Gallery)

@@ -88,8 +88,8 @@ const RouteMap = ({
     [geometry, actions, roundTrip, positions],
   );
   const shortcuts = useMemo(
-    () => buildShortcutLines(detectiveMilestone, positions),
-    [detectiveMilestone, positions],
+    () => buildShortcutLines(detectiveMilestone),
+    [detectiveMilestone],
   );
 
   const [leaflet, setLeaflet] = useState(null);

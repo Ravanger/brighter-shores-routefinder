@@ -267,22 +267,27 @@ const RoutePlanner = () => {
               </tr>
             </thead>
             <tbody>
-              {result.actions.map((action, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-100 dark:border-zinc-700 last:border-none dark:text-zinc-200"
-                >
-                  <td className="py-3">{stopNumbers[index] ?? ""}</td>
-                  <td className="py-3 capitalize">{action.type}</td>
-                  <td className="py-3">
-                    {action.item ? <Bounty bountyKey={action.item} /> : "-"}
-                  </td>
-                  <td className="py-3 text-right">{action.location}</td>
-                  <td className="py-3 text-right">
-                    {formatTime(Math.round(action.distance))}
-                  </td>
-                </tr>
-              ))}
+              {result.actions.map((action, index) => {
+                // Teleports and crime den shortcuts are travel steps, not stops: dim them
+                const dimmed =
+                  action.type === "teleport" || action.type === "den";
+                return (
+                  <tr
+                    key={index}
+                    className={`border-b border-gray-100 dark:border-zinc-700 last:border-none ${dimmed ? "text-gray-400 dark:text-zinc-500" : "dark:text-zinc-200"}`}
+                  >
+                    <td className="py-3">{stopNumbers[index] ?? ""}</td>
+                    <td className="py-3 capitalize">{action.type}</td>
+                    <td className="py-3">
+                      {action.item ? <Bounty bountyKey={action.item} /> : "-"}
+                    </td>
+                    <td className="py-3 text-right">{action.location}</td>
+                    <td className="py-3 text-right">
+                      {formatTime(Math.round(action.distance))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

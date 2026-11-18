@@ -70,3 +70,44 @@ test("routes through enabled crime dens", () => {
   assert.ok(Math.abs(sell.distance - buy.distance - leg) < 1e-9);
 });
 
+// The walk from the Textiles Stall (104) to the Clock Stall (26) crosses the
+// Smugglers den edge [32, 33] when the den is enabled: it shows up as its
+// own travel step in path order, like a teleport.
+test("den shortcuts are added as travel steps in path order", () => {
+  const result = pathfinder.findBestBounties(
+    ["HOMESPUN_CLOTH"],
+    [],
+    0,
+    false,
+    true,
+    false,
+    ["SMUGGLERS"],
+  );
+
+  const buyIndex = result.actions.findIndex((action) => action.type === "buy");
+  const denIndex = result.actions.findIndex((action) => action.type === "den");
+  const sellIndex = result.actions.findIndex(
+    (action) => action.type === "sell",
+  );
+  assert.ok(buyIndex < denIndex && denIndex < sellIndex);
+
+  // The step's distance is the accumulated time plus the room's edge weight.
+  assert.deepEqual(result.actions[denIndex], {
+    type: "den",
+    location: "Smugglers",
+    distance: result.actions[buyIndex].distance + 4.07,
+  });
+
+  // Without the den enabled there are no den steps.
+  const without = pathfinder.findBestBounties(
+    ["HOMESPUN_CLOTH"],
+    [],
+    0,
+    false,
+    true,
+  );
+  assert.equal(
+    without.actions.some((action) => action.type === "den"),
+    false,
+  );
+});

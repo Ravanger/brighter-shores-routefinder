@@ -259,6 +259,17 @@ test("assigns stop numbers to buy/sell actions only, in action order", () => {
   assert.deepEqual(assignStopNumbers(sampleActions), [1, null, 2, null]);
 });
 
+test("teleport, den and Return steps get no number and consume none", () => {
+  const actions = [
+    { type: "buy", item: "CARROTS", location: "Toy Stall", distance: 10 },
+    { type: "den", location: "Smugglers", distance: 15 },
+    { type: "teleport", location: "Crenopolis Market", distance: 23 },
+    { type: "sell", item: "CARROTS", location: "Cheese Shop", distance: 30 },
+    { type: "Return", location: "Guild Bounty Board", distance: 60 },
+  ];
+  assert.deepEqual(assignStopNumbers(actions), [1, null, null, 2, null]);
+});
+
 test("list numbering matches the map steps for the same actions", () => {
   const geometry = buildRouteGeometry(sampleActions, 0, false, true);
   const route = buildRouteSteps(geometry, sampleActions, true);

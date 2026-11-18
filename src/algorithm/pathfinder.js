@@ -3,8 +3,27 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import GPS from "./gps.js";
 import combinations from "./combinations.js";
 import { BountyStatus } from "./bounties.js";
-import { bountyBoard, expressBountyBoard as expressBoard, portals } from "./nodes.js";
+import {
+  bountyBoard,
+  crimeDens,
+  edges,
+  expressBountyBoard as expressBoard,
+  portals,
+} from "./nodes.js";
 import { bounties as bountyData } from "./bounties.js";
+
+// Crime den edges by "a>b" and "b>a" (they are undirected), for labeling
+// the steps through raided den rooms in travel paths.
+const crimeDenSteps = new Map();
+for (const edge of edges) {
+  if (!edge.crimeDen) {
+    continue;
+  }
+  const den = crimeDens.find((den) => den.key === edge.crimeDen);
+  const [a, b] = edge.nodes;
+  crimeDenSteps.set(`${a}>${b}`, { name: den.name, weight: edge.weight });
+  crimeDenSteps.set(`${b}>${a}`, { name: den.name, weight: edge.weight });
+}
 
 /**
  * Determines the best route to take to make all deliveries
@@ -333,7 +352,23 @@ class Pathfinder {
     const currentDistance =
       actions.length > 0 ? actions[actions.length - 1].distance : 0;
 
-    for (let i = 1; i < path.length - 1; i++) {
+    for (let i = 1; i < path.length; i++) {
+      // A step through a raided crime den room is its own line item, like a teleport
+      const denStep = crimeDenSteps.get(`${path[i - 1]}>${path[i]}`);
+      if (denStep) {
+        actions.push({
+          type: "den",
+          location: denStep.name,
+          distance: currentDistance + denStep.weight,
+        });
+        continue;
+      }
+
+      // The destination node is not a travel step
+      if (i === path.length - 1) {
+        continue;
+      }
+
       if (
         this.includeTeleportSteps &&
         path[i] === portals.CRENOPOLIS_MARKET.node

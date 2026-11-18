@@ -122,10 +122,8 @@ const Configuration = () => {
       <Subheading>Crime Den Raids</Subheading>
       <Paragraph>
         Raiding a crime den opens its rooms as a shortcut through Crenopolis.
-        Each den needs the Detective level shown, and you must also be able to
-        defeat its 5 enemies, which are about 75 levels above that requirement.
-        Only tick the dens you can clear. The tool will not route through the
-        others.
+        Each den needs the Detective level shown, and you must be able to
+        defeat its enemies. Only tick the dens you can clear.
       </Paragraph>
 
       {crimeDenList.map((den) => {

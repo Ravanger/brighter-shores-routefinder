@@ -170,11 +170,17 @@ export const markets = {
  * unlock at the start of a milestone, so only the milestone matters, not the
  * within-milestone level.
  *
- * `crimeDen` edges go through a Crime Den Raid room (see `crimeDens`). An
- * edge is only usable when that den is in the enabled list passed to GPS
- * (see `getEnabledCrimeDens`).
+ * `crimeDen` edges go through a Crime Den Raid room (see `crimeDens` and
+ * `denRooms`). Each den passage is two half-edges, street → room node →
+ * street; the room node sits at the room's wiki polygon centre
+ * (nodePositions.js) and is where the route map draws the walk line and
+ * marks the den dot. An edge is only usable when that den is in the enabled
+ * list passed to GPS (see `getEnabledCrimeDens`).
  *
- * `quest` edges are paths that require a quest to be completed to travel through.
+ * `quest` edges are passages that open once a quest is complete (see
+ * `questRooms`): each passage is a street → room node → street pair, the
+ * room node sitting at the room's wiki polygon centre (nodePositions.js),
+ * so the route map bends the walk line through the room.
  *
  * `portal` edges are paths that connect to a portal stone.
  *
@@ -297,7 +303,9 @@ export const edges = [
   { nodes: [28, 33], weight: 4.82 },
   { nodes: [28, 94], weight: 8.39 },
 
-  { nodes: [29, 30], weight: 100, crimeDen: "SMUGGLERS" },
+  // Smugglers passage via the Geld Family Residence (measured 5s total).
+  { nodes: [29, 126], weight: 2.5, crimeDen: "SMUGGLERS" },
+  { nodes: [30, 126], weight: 2.5, crimeDen: "SMUGGLERS" },
   { nodes: [29, 94], weight: 7.5 },
 
   { nodes: [30, 31], weight: 4.77 },
@@ -309,7 +317,9 @@ export const edges = [
   { nodes: [31, 104], weight: 2.44 },
 
   { nodes: [32, 34], weight: 3.71 },
-  { nodes: [32, 33], weight: 4.07, crimeDen: "SMUGGLERS" },
+  // Smugglers passage via the Geld Family Logistics (measured 4.07s total).
+  { nodes: [32, 127], weight: 2.035, crimeDen: "SMUGGLERS" },
+  { nodes: [33, 127], weight: 2.035, crimeDen: "SMUGGLERS" },
   { nodes: [32, 104], weight: 2.2 },
 
   { nodes: [33, 94], weight: 4.27 },
@@ -369,14 +379,18 @@ export const edges = [
   // { nodes: [48, 93] }, Not needed
 
   // { nodes: [49, 52] }, Not needed
-  { nodes: [49, 50], weight: 100, crimeDen: "BURGLARS" },
+  // Burglars passage via the Market Chambers (measured 5s total).
+  { nodes: [49, 130], weight: 2.5, crimeDen: "BURGLARS" },
+  { nodes: [50, 130], weight: 2.5, crimeDen: "BURGLARS" },
 
   // { nodes: [50, 51] }, Not needed
   { nodes: [50, 56], weight: 6.87 },
   { nodes: [50, 59], weight: 4.4 },
   { nodes: [50, 100], weight: 7.12 },
 
-  { nodes: [51, 52], weight: 4.43, crimeDen: "BURGLARS" },
+  // Burglars passage via Oscen's Warehouse (measured 4.43s total).
+  { nodes: [51, 131], weight: 2.215, crimeDen: "BURGLARS" },
+  { nodes: [52, 131], weight: 2.215, crimeDen: "BURGLARS" },
   { nodes: [51, 56], weight: 6.34 },
   { nodes: [51, 59], weight: 6.3 },
   { nodes: [51, 100], weight: 7.29 },
@@ -415,13 +429,17 @@ export const edges = [
 
   { nodes: [61, 95], weight: 4.6 },
 
-  { nodes: [62, 63], weight: 6.62, crimeDen: "COUNTERFEITERS" },
+  // Counterfeiters passage via the Dilapidated Warehouse (measured 6.62s total).
+  { nodes: [62, 128], weight: 3.31, crimeDen: "COUNTERFEITERS" },
+  { nodes: [63, 128], weight: 3.31, crimeDen: "COUNTERFEITERS" },
 
   // { nodes: [63, 65] }, Not needed
   { nodes: [63, 67], weight: 5.06 },
   { nodes: [63, 101], weight: 6.77 },
 
-  { nodes: [64, 65], weight: 100, crimeDen: "COUNTERFEITERS" },
+  // Counterfeiters passage via the Slant Street Cart House (measured 7s total).
+  { nodes: [64, 129], weight: 3.5, crimeDen: "COUNTERFEITERS" },
+  { nodes: [65, 129], weight: 3.5, crimeDen: "COUNTERFEITERS" },
   { nodes: [64, 97], weight: 2.7 },
   { nodes: [64, 99], weight: 6.61 },
 
@@ -525,39 +543,61 @@ export const edges = [
   { nodes: [105, 75], weight: 5.16, directed: true },
   { nodes: [105, 76], weight: 2.42, directed: true },
   { nodes: [105, 77], weight: 0.1, directed: true },
+  // Abandoned Alleyway passage via the room node 136 (opens after the Battle
+  // of Fortunehold; measured 6.34s / 9.6s per direction).
   {
-    nodes: [105, 106],
-    weight: 6.34,
+    nodes: [105, 136],
+    weight: 3.17,
+    directed: true,
+    quest: "BATTLE_OF_FORTUNEHOLD",
+  },
+  {
+    nodes: [136, 106],
+    weight: 3.17,
     directed: true,
     quest: "BATTLE_OF_FORTUNEHOLD",
   },
 
   {
-    nodes: [106, 105],
-    weight: 9.6,
+    nodes: [106, 136],
+    weight: 4.8,
+    directed: true,
+    quest: "BATTLE_OF_FORTUNEHOLD",
+  },
+  {
+    nodes: [136, 105],
+    weight: 4.8,
     directed: true,
     quest: "BATTLE_OF_FORTUNEHOLD",
   },
 
-  { nodes: [107, 108], weight: 3.19, crimeDen: "MUGGERS" },
+  // Muggers passage via the Four Winds Backroom (measured 3.19s total).
+  { nodes: [107, 132], weight: 1.595, crimeDen: "MUGGERS" },
+  { nodes: [108, 132], weight: 1.595, crimeDen: "MUGGERS" },
   // { nodes: [107, 109] }, Not needed
   { nodes: [107, 111], weight: 5.34 },
 
   // { nodes: [108, 110] }, Not needed
   { nodes: [108, 112], weight: 4.94 },
 
-  { nodes: [109, 110], weight: 2.57, crimeDen: "MUGGERS" },
+  // Muggers passage via the Four Winds Side Room (measured 2.57s total).
+  { nodes: [109, 133], weight: 1.285, crimeDen: "MUGGERS" },
+  { nodes: [110, 133], weight: 1.285, crimeDen: "MUGGERS" },
   { nodes: [109, 111], weight: 7.85 },
 
   { nodes: [110, 112], weight: 2.79 },
 
-  { nodes: [113, 114], weight: 2.97, crimeDen: "GANGSTERS" },
+  // Gangsters passage via Gillad's House (measured 2.97s total).
+  { nodes: [113, 134], weight: 1.485, crimeDen: "GANGSTERS" },
+  { nodes: [114, 134], weight: 1.485, crimeDen: "GANGSTERS" },
   // { nodes: [113, 116] }, Not needed
 
   // { nodes: [114, 115] }, Not needed
   { nodes: [114, 117], weight: 6.49 },
 
-  { nodes: [115, 116], weight: 6.1, crimeDen: "GANGSTERS" },
+  // Gangsters passage via The Quill Club (measured 6.1s total).
+  { nodes: [115, 135], weight: 3.05, crimeDen: "GANGSTERS" },
+  { nodes: [116, 135], weight: 3.05, crimeDen: "GANGSTERS" },
   { nodes: [115, 117], weight: 5.42 },
 
   // City Shortcuts are teleports between two rooms (see `cityShortcuts`),
@@ -634,8 +674,9 @@ export const cityShortcuts = [
 /**
  * Crime Den Raids are Detective activities in Crenopolis: five dens, each
  * with two rooms. Once a den's rooms have been raided they become a shortcut
- * between the two streets it connects (the corresponding `edges` entries
- * carry `crimeDen`).
+ * between the two streets it connects: each room is its own graph node
+ * (`denRooms`) and each passage is a street → room → street pair of
+ * `crimeDen` edges in `edges`.
  * An edge is only usable when the player's Detective milestone and level
  * meet the den's requirement AND the player has ticked the den in
  * Configuration, because clearing a den needs combat level too.
@@ -682,6 +723,39 @@ export const crimeDens = [
     rooms: ["Gillad's House", "The Quill Club"],
     connects: ["Peacock Road Central", "Dawkin Court"],
   },
+];
+
+/**
+ * The ten den rooms as graph nodes (126-135): each passage in `edges` is a
+ * street → room node → street pair through its room node, whose position is
+ * the room's wiki polygon centre (nodePositions.js, generated). The route
+ * map draws the walk line through the room and marks the den dot there.
+ *
+ * Which passage goes through which room follows the order of each den's
+ * `rooms` array — not yet confirmed in-game; re-check against the game map.
+ */
+export const denRooms = [
+  { node: 126, den: "SMUGGLERS", room: "Geld Family Residence" },
+  { node: 127, den: "SMUGGLERS", room: "Geld Family Logistics" },
+  { node: 128, den: "COUNTERFEITERS", room: "Dilapidated Warehouse" },
+  { node: 129, den: "COUNTERFEITERS", room: "Slant Street Cart House" },
+  { node: 130, den: "BURGLARS", room: "Market Chambers" },
+  { node: 131, den: "BURGLARS", room: "Oscen's Warehouse" },
+  { node: 132, den: "MUGGERS", room: "Four Winds Backroom" },
+  { node: 133, den: "MUGGERS", room: "Four Winds Side Room" },
+  { node: 134, den: "GANGSTERS", room: "Gillad's House" },
+  { node: 135, den: "GANGSTERS", room: "The Quill Club" },
+];
+
+/**
+ * Rooms that open as passages once a quest is complete: each is its own
+ * graph node at the room's wiki polygon centre (nodePositions.js,
+ * generated), and its passage in `edges` is a street → room node → street
+ * pair of `quest` edges, usable only when the quest is done. The route map
+ * bends the walk line through the room.
+ */
+export const questRooms = [
+  { node: 136, room: "Abandoned Alleyway", quest: "BATTLE_OF_FORTUNEHOLD" },
 ];
 
 /**

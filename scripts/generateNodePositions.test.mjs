@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   extractGeojsonModules,
+  resolveDenRooms,
   resolvePositions,
+  resolveQuestRooms,
   resolveShortcutEndpoints,
 } from "./generateNodePositions.mjs";
 
@@ -167,4 +169,35 @@ test("resolves a spot glyph sitting on its room's boundary", () => {
       note: "Cellar City Shortcut glyph (teleport spot)",
     },
   ]);
+});
+
+// Den rooms resolve to their polygon centroids; a missing room is reported
+// rather than guessed.
+test("resolves den rooms to their polygon centroids", () => {
+  const geojson = extractGeojsonModules(bundle);
+  const dens = [{ key: "FIXTURE", rooms: ["Greengrocers", "No Such Room"] }];
+
+  const { entries, unresolved } = resolveDenRooms(geojson, dens);
+  assert.deepEqual(entries, [
+    { den: "FIXTURE", room: "Greengrocers", position: [341, 54] },
+  ]);
+  assert.equal(unresolved.length, 1);
+  assert.ok(/No Such Room/.test(unresolved[0]));
+});
+
+// Quest rooms resolve to their polygon centroids; a missing room is reported
+// rather than guessed.
+test("resolves quest rooms to their polygon centroids", () => {
+  const geojson = extractGeojsonModules(bundle);
+  const rooms = [
+    { node: 136, room: "Greengrocers", quest: "FIXTURE" },
+    { node: 137, room: "No Such Room", quest: "FIXTURE" },
+  ];
+
+  const { entries, unresolved } = resolveQuestRooms(geojson, rooms);
+  assert.deepEqual(entries, [
+    { quest: "FIXTURE", room: "Greengrocers", position: [341, 54] },
+  ]);
+  assert.equal(unresolved.length, 1);
+  assert.ok(/No Such Room/.test(unresolved[0]));
 });

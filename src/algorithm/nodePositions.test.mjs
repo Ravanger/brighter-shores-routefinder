@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 import { nodePositions } from "./nodePositions.js";
 import {
   bountyBoard,
+  crimeDens,
+  denRooms,
   expressBountyBoard,
   markets,
   portals,
+  questRooms,
 } from "./nodes.js";
 
 test("every market, both bounty boards and both portals have a finite [x, y] position", () => {
@@ -42,4 +45,34 @@ test("pins a sample of wiki positions", () => {
   assert.deepEqual(nodePositions[36], [414, 93]); // Tonya the Tinkerer
   assert.deepEqual(nodePositions[53], [443, 61]); // Crenopolis Market Portal Stone
   assert.deepEqual(nodePositions[118], [327, 63]); // Ignatius, Twiddle Corner
+});
+
+// Den room nodes: every room in denRooms has a finite position (its wiki
+// polygon centre), used for routing through raided dens and the debug
+// overlay.
+test("every crime den room node has a finite position", () => {
+  assert.equal(denRooms.length, crimeDens.reduce((sum, den) => sum + den.rooms.length, 0));
+  for (const { den, room, node } of denRooms) {
+    const position = nodePositions[node];
+    assert.ok(Array.isArray(position), `${den} ${room} (node ${node}) has no position`);
+    assert.equal(position.length, 2, `${den} ${room} position is not [x, y]`);
+    assert.ok(
+      Number.isFinite(position[0]) && Number.isFinite(position[1]),
+      `${den} ${room} position is not finite`,
+    );
+  }
+});
+
+// Quest room nodes: every room in questRooms has a finite position (its wiki
+// polygon centre), used for routing through opened passages.
+test("every quest room node has a finite position", () => {
+  for (const { room, node } of questRooms) {
+    const position = nodePositions[node];
+    assert.ok(Array.isArray(position), `${room} (node ${node}) has no position`);
+    assert.equal(position.length, 2, `${room} position is not [x, y]`);
+    assert.ok(
+      Number.isFinite(position[0]) && Number.isFinite(position[1]),
+      `${room} position is not finite`,
+    );
+  }
 });

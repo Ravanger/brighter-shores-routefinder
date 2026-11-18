@@ -4,7 +4,9 @@
 // stones and the City Shortcut endpoint nodes without a marker of their
 // own (their position is the shortcut's map glyph in its room), plus
 // `shortcutSpotPositions`: the actual teleport spot (the shortcut's map
-// glyph) for all ten City Shortcut endpoint nodes.
+// glyph) for all ten City Shortcut endpoint nodes. Also the ten crime den
+// rooms and the quest rooms, as graph nodes at their wiki polygon centres
+// (see `denRooms` and `questRooms` in src/algorithm/nodes.js).
 //
 // Usage: node scripts/generateNodePositions.mjs
 //
@@ -23,7 +25,7 @@
 import { writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { bountyBoard, expressBountyBoard, markets, portals } from "../src/algorithm/nodes.js";
+import { bountyBoard, crimeDens, denRooms, expressBountyBoard, markets, portals, questRooms } from "../src/algorithm/nodes.js";
 
 const GADGET_URL =
   "https://brightershoreswiki.org/w/MediaWiki:Gadget-leaflet-wiki.js?action=raw";
@@ -457,6 +459,74 @@ export const resolveShortcutEndpoints = (
   return { entries, unresolved };
 };
 
+/**
+ * Resolve every crime den's rooms to their wiki in-game [x, y] positions
+ * (the room polygon centroid). These become the positions of the den room
+ * nodes (see `denRooms` in src/algorithm/nodes.js), used for routing
+ * through raided dens and for the route map's debug overlay. Nothing is
+ * guessed: anything unresolved is reported in `unresolved`.
+ * @param geojson {rooms} from {@link extractGeojsonModules}
+ * @param dens Dens from src/algorithm/nodes.js (defaults to crimeDens)
+ * @returns {{entries: {den: string, room: string, position: number[]}[], unresolved: string[]}}
+ */
+export const resolveDenRooms = (geojson, dens = crimeDens) => {
+  const roomByName = new Map(
+    geojson.rooms.map((room) => [room.properties?.name, room]),
+  );
+  const entries = [];
+  const unresolved = [];
+  for (const den of dens) {
+    for (const room of den.rooms) {
+      const feature = roomByName.get(room);
+      if (!feature || feature.geometry?.type !== "Polygon") {
+        unresolved.push(
+          `den ${den.key}: room "${room}" not in wiki GeoJSON`,
+        );
+        continue;
+      }
+      entries.push({
+        den: den.key,
+        room,
+        position: polygonCentroid(feature.geometry.coordinates).map(round2),
+      });
+    }
+  }
+  return { entries, unresolved };
+};
+
+/**
+ * Resolve every quest room to its wiki in-game [x, y] position (the room
+ * polygon centroid). These become the positions of the quest room nodes
+ * (see `questRooms` in src/algorithm/nodes.js), used for routing through
+ * opened passages and drawn by the route map. Nothing is guessed: anything
+ * unresolved is reported in `unresolved`.
+ * @param geojson {rooms, entities} from {@link extractGeojsonModules}
+ * @param rooms Quest rooms from src/algorithm/nodes.js (defaults to questRooms)
+ * @returns {{entries: {quest: string, room: string, position: number[]}[], unresolved: string[]}}
+ */
+export const resolveQuestRooms = (geojson, rooms = questRooms) => {
+  const roomByName = new Map(
+    geojson.rooms.map((room) => [room.properties?.name, room]),
+  );
+  const entries = [];
+  const unresolved = [];
+  for (const entry of rooms) {
+    const feature = roomByName.get(entry.room);
+    if (!feature || feature.geometry?.type !== "Polygon") {
+      unresolved.push(
+        `quest ${entry.quest}: room "${entry.room}" not in wiki GeoJSON`,
+      );
+      continue;
+    }
+    entries.push({
+      quest: entry.quest,
+      room: entry.room,
+      position: polygonCentroid(feature.geometry.coordinates).map(round2),
+    });
+  }
+  return { entries, unresolved };
+};
+
 const main = async () => {
   const response = await fetch(GADGET_URL);
   if (!response.ok) {
@@ -471,14 +541,53 @@ const main = async () => {
   }
   const marketEntries = resolvePositions(geojson);
   const shortcuts = resolveShortcutEndpoints(geojson);
+  const denRoomEntries = resolveDenRooms(geojson);
+  const questRoomEntries = resolveQuestRooms(geojson);
   // A spot only becomes a node position when the node has no marker of its
   // own (a street or den-door node, not a market).
   const marketNodes = new Set(Object.values(markets).map((m) => m.node));
+  // The den room nodes (denRooms in src/algorithm/nodes.js) sit at their
+  // rooms' wiki polygon centres. So do the quest room nodes (questRooms).
+  const denNodeByRoom = new Map(
+    denRooms.map((room) => [`${room.den}:${room.room}`, room.node]),
+  );
+  const questNodeByRoom = new Map(
+    questRooms.map((room) => [`${room.quest}:${room.room}`, room.node]),
+  );
   const entries = [
     ...marketEntries.entries,
     ...shortcuts.entries.filter((entry) => !marketNodes.has(entry.node)),
+    ...denRoomEntries.entries.map((entry) => ({
+      name: entry.room,
+      node: denNodeByRoom.get(`${entry.den}:${entry.room}`),
+      position: entry.position,
+      note: "crime den room centre",
+    })),
+    ...questRoomEntries.entries.map((entry) => ({
+      name: entry.room,
+      node: questNodeByRoom.get(`${entry.quest}:${entry.room}`),
+      position: entry.position,
+      note: "quest room centre",
+    })),
   ].sort((a, b) => a.node - b.node);
-  const unresolved = [...marketEntries.unresolved, ...shortcuts.unresolved];
+  const unresolved = [
+    ...marketEntries.unresolved,
+    ...shortcuts.unresolved,
+    ...denRoomEntries.unresolved,
+    ...questRoomEntries.unresolved,
+    ...denRoomEntries.entries
+      .filter((entry) => !denNodeByRoom.has(`${entry.den}:${entry.room}`))
+      .map(
+        (entry) =>
+          `den ${entry.den}: room "${entry.room}" has no node in denRooms`,
+      ),
+    ...questRoomEntries.entries
+      .filter((entry) => !questNodeByRoom.has(`${entry.quest}:${entry.room}`))
+      .map(
+        (entry) =>
+          `quest ${entry.quest}: room "${entry.room}" has no node in questRooms`,
+      ),
+  ];
 
   if (unresolved.length > 0) {
     console.error("Could not resolve positions for:");

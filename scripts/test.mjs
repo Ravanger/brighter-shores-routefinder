@@ -43,6 +43,7 @@ try {
       "src/algorithm/crimeDens.test.mjs",
       "src/algorithm/nodePositions.test.mjs",
       "src/algorithm/pathfinder.test.mjs",
+      "src/algorithm/questRooms.test.mjs",
       "src/algorithm/routeMapData.test.mjs",
       "src/algorithm/wikiMap.test.mjs",
       "src/hooks/useSettings.test.mjs",

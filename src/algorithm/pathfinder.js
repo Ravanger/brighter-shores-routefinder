@@ -12,8 +12,10 @@ import {
 } from "./nodes.js";
 import { bounties as bountyData } from "./bounties.js";
 
-// Crime den edges by "a>b" and "b>a" (they are undirected), for labeling
-// the steps through raided den rooms in travel paths.
+// Crime den half-edges by "a>b" and "b>a" (they are undirected), for
+// labeling the steps through raided den rooms in travel paths. A passage is
+// two consecutive half-steps around its room node; #addTravelSteps merges
+// them into a single action at the passage's full weight.
 const crimeDenSteps = new Map();
 for (const edge of edges) {
   if (!edge.crimeDen) {
@@ -371,13 +373,20 @@ class Pathfinder {
       actions.length > 0 ? actions[actions.length - 1].distance : 0;
 
     for (let i = 1; i < path.length; i++) {
-      // A step through a raided crime den room is its own line item, like a teleport
+      // A step through a raided crime den room is its own line item, like a
+      // teleport. A passage is two half-steps around its room node (street →
+      // room → street); report the whole passage once, at its full weight.
       const denStep = crimeDenSteps.get(`${path[i - 1]}>${path[i]}`);
       if (denStep) {
+        let weight = denStep.weight;
+        if (i + 1 < path.length && crimeDenSteps.has(`${path[i]}>${path[i + 1]}`)) {
+          weight += crimeDenSteps.get(`${path[i]}>${path[i + 1]}`).weight;
+          i++; // The second half-step is the same passage.
+        }
         actions.push({
           type: "den",
           location: denStep.name,
-          distance: currentDistance + denStep.weight,
+          distance: currentDistance + weight,
         });
         continue;
       }

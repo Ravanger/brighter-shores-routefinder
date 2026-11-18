@@ -41,6 +41,17 @@ export const nodePositions = {
   107: [365.01, 61.64], // Snag Alley — Cellar City Shortcut glyph (teleport spot)
   118: [327, 63], // Cabbage Stall — marker "Ignatius" in Twiddle Corner
   119: [391, 29], // Pearl Stall — marker "Pearl" in Peacock Road South
+  126: [375, 85], // Geld Family Residence — crime den room centre
+  127: [383.5, 85], // Geld Family Logistics — crime den room centre
+  128: [420.5, 24.89], // Dilapidated Warehouse — crime den room centre
+  129: [410.09, 34.04], // Slant Street Cart House — crime den room centre
+  130: [430.84, 68.55], // Market Chambers — crime den room centre
+  131: [420, 61], // Oscen's Warehouse — crime den room centre
+  132: [355.01, 59.09], // Four Winds Backroom — crime den room centre
+  133: [365, 72], // Four Winds Side Room — crime den room centre
+  134: [382, 1.19], // Gillad's House — crime den room centre
+  135: [385.85, 12.32], // The Quill Club — crime den room centre
+  136: [311.41, 11.67], // Abandoned Alleyway — quest room centre
 };
 
 // The actual teleport spot (the shortcut's map glyph) for each of the ten

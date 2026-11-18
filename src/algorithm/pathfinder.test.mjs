@@ -39,8 +39,8 @@ test("starts at the Express Bounty Board and returns there when enabled", () => 
 });
 
 // HOMESPUN_CLOTH: buy at the Textiles Stall (104), sell at the Clock Stall
-// (26). The walk between them crosses the Smugglers den edge [32, 33], so
-// enabling the den shortens the route.
+// (26). The walk between them crosses the Smugglers passage via the Geld
+// Family Logistics (node 127), so enabling the den shortens the route.
 test("routes through enabled crime dens", () => {
   const without = pathfinder.findBestBounties(
     ["HOMESPUN_CLOTH"],
@@ -71,8 +71,9 @@ test("routes through enabled crime dens", () => {
 });
 
 // The walk from the Textiles Stall (104) to the Clock Stall (26) crosses the
-// Smugglers den edge [32, 33] when the den is enabled: it shows up as its
-// own travel step in path order, like a teleport.
+// Smugglers passage via the Geld Family Logistics (node 127) when the den is
+// enabled: it shows up as its own travel step in path order, like a
+// teleport.
 test("den shortcuts are added as travel steps in path order", () => {
   const result = pathfinder.findBestBounties(
     ["HOMESPUN_CLOTH"],

@@ -39,6 +39,7 @@ try {
     "node",
     [
       "--test",
+      "src/algorithm/cityShortcuts.test.mjs",
       "src/algorithm/crimeDens.test.mjs",
       "src/algorithm/nodePositions.test.mjs",
       "src/algorithm/pathfinder.test.mjs",

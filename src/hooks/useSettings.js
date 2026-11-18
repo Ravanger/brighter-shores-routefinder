@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { pruneCrimeDenToggles } from "../algorithm/nodes.js";
 
 export const defaultSettings = {
   // Milestone 1, level 0 is the new-scale equivalent of the old level 100
@@ -38,6 +39,13 @@ const useSettings = () => {
       settings.detectiveMilestone = defaultSettings.detectiveMilestone;
       settings.detectiveLevel = defaultSettings.detectiveLevel;
     }
+    // Untick any den whose requirement is no longer met (see
+    // pruneCrimeDenToggles); covers settings saved before this pruning.
+    settings.crimeDens = pruneCrimeDenToggles(
+      settings.crimeDens,
+      settings.detectiveMilestone,
+      settings.detectiveLevel,
+    );
     return settings;
   });
 
@@ -97,17 +105,31 @@ const useSettings = () => {
   };
 
   const setDetectiveMilestone = (detectiveMilestone) => {
+    const milestone =
+      detectiveMilestone === "" ? "" : Number(detectiveMilestone);
     setSettings((settings) => ({
+      // Lowering the Detective level unticks any den that is no longer clearable
       ...settings,
-      detectiveMilestone:
-        detectiveMilestone === "" ? "" : Number(detectiveMilestone),
+      detectiveMilestone: milestone,
+      crimeDens: pruneCrimeDenToggles(
+        settings.crimeDens,
+        milestone,
+        settings.detectiveLevel,
+      ),
     }));
   };
 
   const setDetectiveLevel = (detectiveLevel) => {
+    const level = detectiveLevel === "" ? "" : Number(detectiveLevel);
     setSettings((settings) => ({
+      // Lowering the Detective level unticks any den that is no longer clearable
       ...settings,
-      detectiveLevel: detectiveLevel === "" ? "" : Number(detectiveLevel),
+      detectiveLevel: level,
+      crimeDens: pruneCrimeDenToggles(
+        settings.crimeDens,
+        settings.detectiveMilestone,
+        level,
+      ),
     }));
   };
 

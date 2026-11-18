@@ -711,3 +711,29 @@ export const getEnabledCrimeDens = (
     .map((den) => den.key);
 };
 
+/**
+ * Removes den toggles whose Detective requirement is no longer met, so a
+ * checked den can never sit below its cutoff (the player may no longer have
+ * the level needed to clear it). Reuses {@link getEnabledCrimeDens}: what is
+ * kept is exactly what is enabled.
+ * @param crimeDenToggles Object of { [key from {@link crimeDens}]: boolean }
+ *   The player's per-den "I can clear this den" toggles; a missing key is off.
+ * @param detectiveMilestone The player's Detective milestone (0-9)
+ * @param detectiveLevel The player's level within the milestone (0-99)
+ * @returns {Object.<string, boolean>} The toggles to keep, all true
+ */
+export const pruneCrimeDenToggles = (
+  crimeDenToggles,
+  detectiveMilestone,
+  detectiveLevel,
+) => {
+  const kept = {};
+  for (const key of getEnabledCrimeDens(
+    crimeDenToggles,
+    detectiveMilestone,
+    detectiveLevel,
+  )) {
+    kept[key] = true;
+  }
+  return kept;
+};

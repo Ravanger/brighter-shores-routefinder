@@ -6,6 +6,7 @@ import {
   edges,
   getEnabledCrimeDens,
   meetsCrimeDenRequirement,
+  pruneCrimeDenToggles,
 } from "./nodes.js";
 
 // The Smugglers edge [32, 33] (weight 4.07) has a low enough weight that it
@@ -48,6 +49,26 @@ test("getEnabledCrimeDens returns ticked dens whose requirement is met", () => {
     getEnabledCrimeDens({ SMUGGLERS: false, GANGSTERS: true }, 9, 99),
     ["GANGSTERS"],
   );
+});
+
+test("pruneCrimeDenToggles unticks dens below the requirement", () => {
+  // Requirement met: kept as is.
+  assert.deepEqual(pruneCrimeDenToggles({ SMUGGLERS: true }, 0, 28), {
+    SMUGGLERS: true,
+  });
+  // Below the level cutoff: unticked.
+  assert.deepEqual(pruneCrimeDenToggles({ SMUGGLERS: true }, 0, 27), {});
+  // Below the milestone cutoff: unticked.
+  assert.deepEqual(pruneCrimeDenToggles({ COUNTERFEITERS: true }, 0, 99), {});
+  // Only the dens whose requirement is still met are kept.
+  assert.deepEqual(
+    pruneCrimeDenToggles({ COUNTERFEITERS: true, BURGLARS: true }, 1, 50),
+    { COUNTERFEITERS: true },
+  );
+  // Empty inputs count as 0.
+  assert.deepEqual(pruneCrimeDenToggles({ SMUGGLERS: true }, "", ""), {});
+  // No toggles: nothing to keep.
+  assert.deepEqual(pruneCrimeDenToggles(undefined, 9, 99), {});
 });
 
 test("meetsCrimeDenRequirement compares milestone then level", () => {

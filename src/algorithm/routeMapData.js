@@ -7,10 +7,14 @@ const PADDING = 24;
 
 // Adjacency between nodes, respecting edge direction: a step a -> b is a
 // normal walk if an edge lists [a, b], or lists [b, a] and is undirected.
-// Anything else on a GPS path is a teleport jump to a portal stone.
+// Anything else on a GPS path — a portal stone jump or a City Shortcut
+// teleport (edges carry `cityShortcut`) — is drawn as a dashed segment.
 const buildAdjacency = () => {
   const adjacency = new Set();
   for (const edge of edges) {
+    if (edge.cityShortcut) {
+      continue;
+    }
     const [a, b] = edge.nodes;
     adjacency.add(`${a}>${b}`);
     if (!edge.directed) {

@@ -559,29 +559,59 @@ export const edges = [
 
   { nodes: [115, 116], weight: 6.1, crimeDen: "GANGSTERS" },
   { nodes: [115, 117], weight: 5.42 },
+
+  // City Shortcuts are teleports between two rooms (see `cityShortcuts`),
+  // unlocked at a Detective milestone; the walk to and from each spot is
+  // the surrounding edges, the weight is the teleport itself.
+  {
+    nodes: [84, 107],
+    weight: 2,
+    detectiveMilestone: 5,
+    cityShortcut: "Cellar",
+  },
+  { nodes: [48, 80], weight: 2, detectiveMilestone: 6, cityShortcut: "Sewer" },
+  {
+    nodes: [57, 71],
+    weight: 2,
+    detectiveMilestone: 7,
+    cityShortcut: "Painting",
+  },
+  {
+    nodes: [67, 118],
+    weight: 2,
+    detectiveMilestone: 8,
+    cityShortcut: "Manhole",
+  },
+  {
+    nodes: [26, 83],
+    weight: 2,
+    detectiveMilestone: 9,
+    cityShortcut: "Trapdoor",
+  },
 ];
 
 /**
  * City Shortcuts (added to the game 29 September 2026) are Detective
- * profession interlink rewards: alternate routes through Crenopolis, one
- * unlocked per Detective milestone from 5 onwards.
- * Source: https://brightershoreswiki.org/w/City_Shortcut
- * (the individual variant pages list each shortcut's two locations).
+ * profession interlink rewards: teleports between two rooms in Crenopolis,
+ * one unlocked per Detective milestone from 5 onwards. Each is wired as an
+ * edge in `edges` carrying its name and `detectiveMilestone`; the weight is
+ * the ~2s teleport itself — the walk to and from each spot is the
+ * surrounding edges.
+ * Source: https://brightershoreswiki.org/w/City_Shortcut (the individual
+ * variant pages list each shortcut's two locations).
  *
- * These are not graph edges yet: no shortcut has both endpoints verified to
- * a node number in the repo's data, so none can be added to `edges` without
- * guessing. Candidate endpoint nodes, from shop nodes in `markets` (the shop
- * sits in the named area). Areas confirmed against the wiki, which states
- * the Cheese Shop is in Unicorn Farm and the Toy Stall is in Tanners Road;
- * Bert's Gallery is a location in Crenopolis. There is no current map, so
- * re-verify in-game before wiring an edge:
- *   Unicorn Farm -> 84 (Cheese Shop), Tanners Road -> 36 (Toy Stall),
- *   Bert's Gallery -> 57.
- * The other endpoints (Snag Alley, Sludge Street, Fillan's Living Room,
- * Dusty Nook, Slant Street, Council Office, The Frog and Barnacle) are
- * streets, rooms, or buildings with no single node number.
- * Once both endpoints of a shortcut are verified, add it to `edges` as
- * `{ nodes: [a, b], weight: <seconds>, detectiveMilestone: <milestone> }`.
+ * Endpoint node numbers, from the wiki map gadget's shortcut marker
+ * coordinates (MediaWiki:Gadget-leaflet-wiki.js) matched to this repo's
+ * graph. The street endpoints without a market of their own (107, 80, 48,
+ * 67) have their position set to the shortcut's map glyph in
+ * nodePositions.js; the market endpoints stand in for their teleport spot
+ * (the nearest node to the marker), so re-verify them in-game if a route
+ * looks off:
+ *   Cellar     84 (Unicorn Farm) <-> 107 (Snag Alley)
+ *   Sewer      80 (Sludge Street) <-> 48 (Tanners Road)
+ *   Painting   71 (Fillan's Living Room) <-> 57 (Bert's Gallery)
+ *   Manhole    118 (Dusty Nook) <-> 67 (Slant Street)
+ *   Trapdoor   83 (Council Office) <-> 26 (The Frog and Barnacle)
  */
 export const cityShortcuts = [
   { name: "Cellar", milestone: 5, rooms: ["Unicorn Farm", "Snag Alley"] },

@@ -268,9 +268,12 @@ const RoutePlanner = () => {
             </thead>
             <tbody>
               {result.actions.map((action, index) => {
-                // Teleports and crime den shortcuts are travel steps, not stops: dim them
+                // Teleports, crime den rooms and city shortcuts are travel
+                // steps, not stops: dim them
                 const dimmed =
-                  action.type === "teleport" || action.type === "den";
+                  action.type === "teleport" ||
+                  action.type === "den" ||
+                  action.type === "shortcut";
                 return (
                   <tr
                     key={index}

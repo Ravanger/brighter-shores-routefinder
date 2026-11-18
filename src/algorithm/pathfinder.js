@@ -25,6 +25,24 @@ for (const edge of edges) {
   crimeDenSteps.set(`${b}>${a}`, { name: den.name, weight: edge.weight });
 }
 
+// City Shortcut edges by "a>b" and "b>a" (they are undirected), for labeling
+// the teleport steps across a shortcut in travel paths.
+const cityShortcutSteps = new Map();
+for (const edge of edges) {
+  if (!edge.cityShortcut) {
+    continue;
+  }
+  const [a, b] = edge.nodes;
+  cityShortcutSteps.set(`${a}>${b}`, {
+    name: edge.cityShortcut,
+    weight: edge.weight,
+  });
+  cityShortcutSteps.set(`${b}>${a}`, {
+    name: edge.cityShortcut,
+    weight: edge.weight,
+  });
+}
+
 /**
  * Determines the best route to take to make all deliveries
  */
@@ -360,6 +378,17 @@ class Pathfinder {
           type: "den",
           location: denStep.name,
           distance: currentDistance + denStep.weight,
+        });
+        continue;
+      }
+
+      // A step across a City Shortcut is its own line item, like a teleport
+      const shortcutStep = cityShortcutSteps.get(`${path[i - 1]}>${path[i]}`);
+      if (shortcutStep && this.includeTeleportSteps) {
+        actions.push({
+          type: "shortcut",
+          location: shortcutStep.name,
+          distance: currentDistance + shortcutStep.weight,
         });
         continue;
       }

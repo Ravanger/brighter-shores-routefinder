@@ -253,6 +253,40 @@ export const assignStopNumbers = (actions, positions = nodePositions) => {
 };
 
 /**
+ * The City Shortcut lines for the map: one line per shortcut unlocked at the
+ * given Detective milestone, between its two endpoint nodes' positions.
+ * A shortcut with an unpositioned endpoint is skipped (nothing to draw).
+ * @param detectiveMilestone The player's Detective milestone (0-9)
+ * @param positions Node number -> [x, y] (defaults to {@link nodePositions})
+ * @returns {{name: string, points: number[][]}[]}
+ */
+export const buildShortcutLines = (
+  detectiveMilestone,
+  positions = nodePositions,
+) => {
+  const milestone =
+    detectiveMilestone === "" ||
+    detectiveMilestone === undefined ||
+    detectiveMilestone === null
+      ? 0
+      : detectiveMilestone;
+  const lines = [];
+  for (const edge of edges) {
+    if (!edge.cityShortcut || edge.detectiveMilestone > milestone) {
+      continue;
+    }
+    const [a, b] = edge.nodes;
+    const positionA = positions[a];
+    const positionB = positions[b];
+    if (!positionA || !positionB) {
+      continue;
+    }
+    lines.push({ name: edge.cityShortcut, points: [positionA, positionB] });
+  }
+  return lines;
+};
+
+/**
  * Turns a pathfinder actions list into the geometry for a schematic route map.
  * @param actions Actions from {@link pathfinder.findBestBounties} (buy/sell/
  *   teleport/Return, each with a `location` market name)

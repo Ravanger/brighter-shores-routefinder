@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import GPS from "./gps.js";
 import pathfinder from "./pathfinder.js";
-import { buildRouteGeometry } from "./routeMapData.js";
+import { buildRouteGeometry, buildShortcutLines } from "./routeMapData.js";
 import { cityShortcuts, edges } from "./nodes.js";
 import { nodePositions } from "./nodePositions.js";
 
@@ -95,4 +95,24 @@ test("shortcut legs are drawn as dashed segments on the route map", () => {
 
   assert.ok(hasShortcutSegment(buildRouteGeometry(actions, 5, false, true)));
   assert.ok(!hasShortcutSegment(buildRouteGeometry(actions, 4, false, true)));
+});
+
+// The map draws one line per unlocked shortcut, between the two endpoints'
+// positions. Below a shortcut's milestone it is not drawn; an endpoint with
+// no position leaves nothing to draw.
+test("shortcut lines appear only once the shortcut is unlocked", () => {
+  assert.deepEqual(buildShortcutLines(4), []);
+
+  const m5 = buildShortcutLines(5);
+  assert.equal(m5.length, 1);
+  assert.deepEqual(m5[0], {
+    name: "Cellar",
+    points: [nodePositions[84], nodePositions[107]],
+  });
+
+  assert.equal(buildShortcutLines(9).length, 5);
+
+  const withoutSnagAlley = { ...nodePositions };
+  delete withoutSnagAlley[107];
+  assert.deepEqual(buildShortcutLines(5, withoutSnagAlley), []);
 });

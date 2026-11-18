@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildRouteGeometry,
   buildRouteSteps,
+  buildShortcutLines,
   formatStopNumbers,
 } from "../algorithm/routeMapData.js";
 import { nodePositions } from "../algorithm/nodePositions.js";
@@ -85,6 +86,10 @@ const RouteMap = ({
     () =>
       geometry ? buildRouteSteps(geometry, actions, roundTrip, positions) : null,
     [geometry, actions, roundTrip, positions],
+  );
+  const shortcuts = useMemo(
+    () => buildShortcutLines(detectiveMilestone, positions),
+    [detectiveMilestone, positions],
   );
 
   const [leaflet, setLeaflet] = useState(null);
@@ -211,6 +216,17 @@ const RouteMap = ({
     layers.clearLayers();
     const { routePoints, places } = route;
 
+    // Unlocked City Shortcuts: dotted lines between their two spots, drawn
+    // before the route so the route stays on top.
+    for (const shortcut of shortcuts) {
+      const line = L.polyline(
+        shortcut.points.map(([x, y]) => wikiToLatLng([x, y])),
+        { color: "#7c3aed", weight: 3, dashArray: "2 6", opacity: 0.8 },
+      );
+      line.bindTooltip(shortcut.name, { sticky: true });
+      line.addTo(layers);
+    }
+
     // Full route: solid for walking, dashed for teleports.
     for (let i = 1; i < routePoints.length; i++) {
       const a = routePoints[i - 1];
@@ -248,7 +264,7 @@ const RouteMap = ({
       });
       marker.addTo(layers);
     }
-  }, [leaflet, route, geometry]);
+  }, [leaflet, route, geometry, shortcuts]);
 
   if (!geometry || !route) {
     return null;
@@ -264,7 +280,7 @@ const RouteMap = ({
       />
       <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">
         Legend: green dot is the start, a numbered circle is a stop, a dashed
-        line is a teleport.
+        line is a teleport, a dotted purple line is an unlocked City Shortcut.
       </p>
     </div>
   );

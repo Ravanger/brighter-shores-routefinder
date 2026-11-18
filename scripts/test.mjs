@@ -1,13 +1,13 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 // Runs the repo's tests with node:test (no test runner dependency).
-// The RouteMap render test imports .jsx, which node cannot parse, so it is
-// bundled to plain JS with esbuild (already present via vite) first. The
-// bundle is CommonJS: react-dom/server requires Node builtins in a way the
-// ESM bundle shim cannot handle.
+// The component render tests import .jsx, which node cannot parse, so they
+// are bundled to plain JS with esbuild (already present via vite) first.
+// The bundles are CommonJS: react-dom/server requires Node builtins in a
+// way the ESM bundle shim cannot handle.
 const esbuild = "node_modules/.bin/esbuild";
 
 if (!existsSync(esbuild)) {
@@ -15,14 +15,19 @@ if (!existsSync(esbuild)) {
   process.exit(1);
 }
 
+const jsxTests = [
+  "src/components/Legend.test.mjs",
+  "src/components/OverlayToggles.test.mjs",
+  "src/components/RouteMap.test.mjs",
+];
+
 const tmp = mkdtempSync(join(tmpdir(), "routefinder-test-"));
-const bundledTest = join(tmp, "RouteMap.test.cjs");
 
 try {
   execFileSync(
     esbuild,
     [
-      "src/components/RouteMap.test.mjs",
+      ...jsxTests,
       "--bundle",
       "--platform=node",
       "--format=cjs",
@@ -30,7 +35,7 @@ try {
       // RouteMap dynamically imports leaflet (client-only); keep it external
       // so the bundle step does not try to split it into chunks.
       "--external:leaflet",
-      `--outfile=${bundledTest}`,
+      `--outdir=${tmp}`,
     ],
     { stdio: "inherit" },
   );
@@ -39,13 +44,17 @@ try {
     "node",
     [
       "--test",
+      "src/algorithm/cityShortcuts.test.mjs",
+      "src/algorithm/crimeDens.test.mjs",
       "src/algorithm/nodePositions.test.mjs",
       "src/algorithm/pathfinder.test.mjs",
+      "src/algorithm/questRooms.test.mjs",
       "src/algorithm/routeMapData.test.mjs",
       "src/algorithm/wikiMap.test.mjs",
       "src/hooks/useSettings.test.mjs",
       "scripts/generateNodePositions.test.mjs",
-      bundledTest,
+      // esbuild names the bundles <entry>.js for --format=cjs.
+      ...jsxTests.map((file) => join(tmp, `${basename(file, ".mjs")}.js`)),
     ],
     { stdio: "inherit" },
   );

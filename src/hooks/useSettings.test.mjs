@@ -5,3 +5,7 @@ import { defaultSettings } from "./useSettings.js";
 test("the Express bounty board is off by default", () => {
   assert.equal(defaultSettings.expressBountyBoard, false);
 });
+
+test("crime dens are off by default", () => {
+  assert.deepEqual(defaultSettings.crimeDens, {});
+});

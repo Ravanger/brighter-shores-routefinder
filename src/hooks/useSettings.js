@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { pruneCrimeDenToggles } from "../algorithm/nodes.js";
 
 export const defaultSettings = {
   // Milestone 1, level 0 is the new-scale equivalent of the old level 100
@@ -10,6 +11,9 @@ export const defaultSettings = {
   // milestone 5, so the level is stored for display and future gates.
   detectiveMilestone: 0,
   detectiveLevel: 0,
+  // Off by default: the tool cannot know the player's combat level, which
+  // is needed to clear a den.
+  crimeDens: {},
   battleOfFortuneholdCompleted: false,
   roundTrip: true,
   // The Express Bounty Board in the South Player Market needs The Imposter
@@ -35,6 +39,13 @@ const useSettings = () => {
       settings.detectiveMilestone = defaultSettings.detectiveMilestone;
       settings.detectiveLevel = defaultSettings.detectiveLevel;
     }
+    // Untick any den whose requirement is no longer met (see
+    // pruneCrimeDenToggles); covers settings saved before this pruning.
+    settings.crimeDens = pruneCrimeDenToggles(
+      settings.crimeDens,
+      settings.detectiveMilestone,
+      settings.detectiveLevel,
+    );
     return settings;
   });
 
@@ -74,6 +85,10 @@ const useSettings = () => {
     return settings.expressBountyBoard ?? false;
   }, [settings]);
 
+  const crimeDens = useMemo(() => {
+    return settings.crimeDens ?? {};
+  }, [settings]);
+
   const setMerchantingMilestone = (merchantingMilestone) => {
     setSettings((settings) => ({
       ...settings,
@@ -90,17 +105,31 @@ const useSettings = () => {
   };
 
   const setDetectiveMilestone = (detectiveMilestone) => {
+    const milestone =
+      detectiveMilestone === "" ? "" : Number(detectiveMilestone);
     setSettings((settings) => ({
+      // Lowering the Detective level unticks any den that is no longer clearable
       ...settings,
-      detectiveMilestone:
-        detectiveMilestone === "" ? "" : Number(detectiveMilestone),
+      detectiveMilestone: milestone,
+      crimeDens: pruneCrimeDenToggles(
+        settings.crimeDens,
+        milestone,
+        settings.detectiveLevel,
+      ),
     }));
   };
 
   const setDetectiveLevel = (detectiveLevel) => {
+    const level = detectiveLevel === "" ? "" : Number(detectiveLevel);
     setSettings((settings) => ({
+      // Lowering the Detective level unticks any den that is no longer clearable
       ...settings,
-      detectiveLevel: detectiveLevel === "" ? "" : Number(detectiveLevel),
+      detectiveLevel: level,
+      crimeDens: pruneCrimeDenToggles(
+        settings.crimeDens,
+        settings.detectiveMilestone,
+        level,
+      ),
     }));
   };
 
@@ -125,6 +154,13 @@ const useSettings = () => {
     }));
   };
 
+  const setCrimeDenEnabled = (key, enabled) => {
+    setSettings((settings) => ({
+      ...settings,
+      crimeDens: { ...(settings.crimeDens ?? {}), [key]: enabled },
+    }));
+  };
+
   return {
     merchantingMilestone,
     merchantingLevel,
@@ -133,6 +169,7 @@ const useSettings = () => {
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard,
+    crimeDens,
     setMerchantingMilestone,
     setMerchantingLevel,
     setDetectiveMilestone,
@@ -140,6 +177,7 @@ const useSettings = () => {
     setBattleOfFortuneholdCompleted,
     setRoundTrip,
     setExpressBountyBoard,
+    setCrimeDenEnabled,
   };
 };
 

@@ -28,8 +28,8 @@ const About = () => {
       </Paragraph>
 
       <Paragraph>
-        Rooms unlocked by quests and Detective City Shortcuts are taken into
-        account, so make sure to{" "}
+        Rooms unlocked by quests, Crime Den Raids and Detective City Shortcuts
+        are taken into account, so make sure to{" "}
         <InternalLink to="/configuration">configure</InternalLink> your
         settings accordingly.
       </Paragraph>

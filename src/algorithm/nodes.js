@@ -170,7 +170,17 @@ export const markets = {
  * unlock at the start of a milestone, so only the milestone matters, not the
  * within-milestone level.
  *
- * `quest` edges are paths that require a quest to be completed to travel through.
+ * `crimeDen` edges go through a Crime Den Raid room (see `crimeDens` and
+ * `denRooms`). Each den passage is two half-edges, street → room node →
+ * street; the room node sits at the room's wiki polygon centre
+ * (nodePositions.js) and is where the route map draws the walk line and
+ * marks the den dot. An edge is only usable when that den is in the enabled
+ * list passed to GPS (see `getEnabledCrimeDens`).
+ *
+ * `quest` edges are passages that open once a quest is complete (see
+ * `questRooms`): each passage is a street → room node → street pair, the
+ * room node sitting at the room's wiki polygon centre (nodePositions.js),
+ * so the route map bends the walk line through the room.
  *
  * `portal` edges are paths that connect to a portal stone.
  *
@@ -293,6 +303,9 @@ export const edges = [
   { nodes: [28, 33], weight: 4.82 },
   { nodes: [28, 94], weight: 8.39 },
 
+  // Smugglers passage via the Geld Family Residence (measured 5s total).
+  { nodes: [29, 126], weight: 2.5, crimeDen: "SMUGGLERS" },
+  { nodes: [30, 126], weight: 2.5, crimeDen: "SMUGGLERS" },
   { nodes: [29, 94], weight: 7.5 },
 
   { nodes: [30, 31], weight: 4.77 },
@@ -304,6 +317,9 @@ export const edges = [
   { nodes: [31, 104], weight: 2.44 },
 
   { nodes: [32, 34], weight: 3.71 },
+  // Smugglers passage via the Geld Family Logistics (measured 4.07s total).
+  { nodes: [32, 127], weight: 2.035, crimeDen: "SMUGGLERS" },
+  { nodes: [33, 127], weight: 2.035, crimeDen: "SMUGGLERS" },
   { nodes: [32, 104], weight: 2.2 },
 
   { nodes: [33, 94], weight: 4.27 },
@@ -363,12 +379,18 @@ export const edges = [
   // { nodes: [48, 93] }, Not needed
 
   // { nodes: [49, 52] }, Not needed
+  // Burglars passage via the Market Chambers (measured 5s total).
+  { nodes: [49, 130], weight: 2.5, crimeDen: "BURGLARS" },
+  { nodes: [50, 130], weight: 2.5, crimeDen: "BURGLARS" },
 
   // { nodes: [50, 51] }, Not needed
   { nodes: [50, 56], weight: 6.87 },
   { nodes: [50, 59], weight: 4.4 },
   { nodes: [50, 100], weight: 7.12 },
 
+  // Burglars passage via Oscen's Warehouse (measured 4.43s total).
+  { nodes: [51, 131], weight: 2.215, crimeDen: "BURGLARS" },
+  { nodes: [52, 131], weight: 2.215, crimeDen: "BURGLARS" },
   { nodes: [51, 56], weight: 6.34 },
   { nodes: [51, 59], weight: 6.3 },
   { nodes: [51, 100], weight: 7.29 },
@@ -407,11 +429,17 @@ export const edges = [
 
   { nodes: [61, 95], weight: 4.6 },
 
+  // Counterfeiters passage via the Dilapidated Warehouse (measured 6.62s total).
+  { nodes: [62, 128], weight: 3.31, crimeDen: "COUNTERFEITERS" },
+  { nodes: [63, 128], weight: 3.31, crimeDen: "COUNTERFEITERS" },
 
   // { nodes: [63, 65] }, Not needed
   { nodes: [63, 67], weight: 5.06 },
   { nodes: [63, 101], weight: 6.77 },
 
+  // Counterfeiters passage via the Slant Street Cart House (measured 7s total).
+  { nodes: [64, 129], weight: 3.5, crimeDen: "COUNTERFEITERS" },
+  { nodes: [65, 129], weight: 3.5, crimeDen: "COUNTERFEITERS" },
   { nodes: [64, 97], weight: 2.7 },
   { nodes: [64, 99], weight: 6.61 },
 
@@ -515,72 +543,340 @@ export const edges = [
   { nodes: [105, 75], weight: 5.16, directed: true },
   { nodes: [105, 76], weight: 2.42, directed: true },
   { nodes: [105, 77], weight: 0.1, directed: true },
+  // Abandoned Alleyway passage via the room node 136 (opens after the Battle
+  // of Fortunehold; measured 6.34s / 9.6s per direction).
   {
-    nodes: [105, 106],
-    weight: 6.34,
+    nodes: [105, 136],
+    weight: 3.17,
+    directed: true,
+    quest: "BATTLE_OF_FORTUNEHOLD",
+  },
+  {
+    nodes: [136, 106],
+    weight: 3.17,
     directed: true,
     quest: "BATTLE_OF_FORTUNEHOLD",
   },
 
   {
-    nodes: [106, 105],
-    weight: 9.6,
+    nodes: [106, 136],
+    weight: 4.8,
+    directed: true,
+    quest: "BATTLE_OF_FORTUNEHOLD",
+  },
+  {
+    nodes: [136, 105],
+    weight: 4.8,
     directed: true,
     quest: "BATTLE_OF_FORTUNEHOLD",
   },
 
+  // Muggers passage via the Four Winds Backroom (measured 3.19s total).
+  { nodes: [107, 132], weight: 1.595, crimeDen: "MUGGERS" },
+  { nodes: [108, 132], weight: 1.595, crimeDen: "MUGGERS" },
   // { nodes: [107, 109] }, Not needed
   { nodes: [107, 111], weight: 5.34 },
 
   // { nodes: [108, 110] }, Not needed
   { nodes: [108, 112], weight: 4.94 },
 
+  // Muggers passage via the Four Winds Side Room (measured 2.57s total).
+  { nodes: [109, 133], weight: 1.285, crimeDen: "MUGGERS" },
+  { nodes: [110, 133], weight: 1.285, crimeDen: "MUGGERS" },
   { nodes: [109, 111], weight: 7.85 },
 
   { nodes: [110, 112], weight: 2.79 },
 
+  // Gangsters passage via Gillad's House (measured 2.97s total).
+  { nodes: [113, 134], weight: 1.485, crimeDen: "GANGSTERS" },
+  { nodes: [114, 134], weight: 1.485, crimeDen: "GANGSTERS" },
   // { nodes: [113, 116] }, Not needed
 
   // { nodes: [114, 115] }, Not needed
   { nodes: [114, 117], weight: 6.49 },
 
+  // Gangsters passage via The Quill Club (measured 6.1s total).
+  { nodes: [115, 135], weight: 3.05, crimeDen: "GANGSTERS" },
+  { nodes: [116, 135], weight: 3.05, crimeDen: "GANGSTERS" },
   { nodes: [115, 117], weight: 5.42 },
+
+  // City Shortcut teleport spots: each spot is its own node (120-125) at
+  // its measured in-game position, with a short walk edge from the nearest
+  // market. Those six walk times are estimates at ~2.6 map units per
+  // second (the median speed of the measured edges) — re-measure in-game
+  // if a route looks off. The four street endpoints (107, 80, 48, 67) are
+  // already their own nodes, also at their measured spots.
+  { nodes: [84, 120], weight: 4.6 }, // Cheese Shop -> Unicorn Farm spot
+  { nodes: [57, 125], weight: 1.4 }, // Bert's Gallery -> its own spot
+  { nodes: [71, 121], weight: 4.8 }, // Monocle Market -> Fillan's Living Room spot
+  { nodes: [118, 122], weight: 3.4 }, // Cabbage Stall -> Dusty Nook spot
+  { nodes: [83, 123], weight: 7.1 }, // Henderson's Meat -> Council Office spot
+  { nodes: [26, 124], weight: 5.5 }, // Clock Stall -> The Frog and Barnacle spot
+
+  // City Shortcuts are teleports between two rooms (see `cityShortcuts`),
+  // unlocked at a Detective milestone; the walk to and from each spot is
+  // the edges above, the weight is the teleport itself.
+  {
+    nodes: [120, 107],
+    weight: 2,
+    detectiveMilestone: 5,
+    cityShortcut: "Cellar",
+  },
+  { nodes: [48, 80], weight: 2, detectiveMilestone: 6, cityShortcut: "Sewer" },
+  {
+    nodes: [125, 121],
+    weight: 2,
+    detectiveMilestone: 7,
+    cityShortcut: "Painting",
+  },
+  {
+    nodes: [67, 122],
+    weight: 2,
+    detectiveMilestone: 8,
+    cityShortcut: "Manhole",
+  },
+  {
+    nodes: [124, 123],
+    weight: 2,
+    detectiveMilestone: 9,
+    cityShortcut: "Trapdoor",
+  },
 ];
 
 /**
  * City Shortcuts (added to the game 29 September 2026) are Detective
- * profession interlink rewards: alternate routes through Crenopolis, one
- * unlocked per Detective milestone from 5 onwards.
- * Source: https://brightershoreswiki.org/w/City_Shortcut
- * (the individual variant pages list each shortcut's two locations).
+ * profession interlink rewards: teleports between two rooms in Crenopolis,
+ * one unlocked per Detective milestone from 5 onwards. Each is wired as an
+ * edge in `edges` carrying its name and `detectiveMilestone`; the weight is
+ * the ~2s teleport itself — the walk to and from each spot is the
+ * surrounding edges.
+ * Source: https://brightershoreswiki.org/w/City_Shortcut (the individual
+ * variant pages list each shortcut's two locations).
  *
- * These are not graph edges yet: no shortcut has both endpoints verified to
- * a node number in the repo's data, so none can be added to `edges` without
- * guessing. Candidate endpoint nodes, from shop nodes in `markets` (the shop
- * sits in the named area). Areas confirmed against the wiki, which states
- * the Cheese Shop is in Unicorn Farm and the Toy Stall is in Tanners Road;
- * Bert's Gallery is a location in Crenopolis. There is no current map, so
- * re-verify in-game before wiring an edge:
- *   Unicorn Farm -> 84 (Cheese Shop), Tanners Road -> 36 (Toy Stall),
- *   Bert's Gallery -> 57.
- * The other endpoints (Snag Alley, Sludge Street, Fillan's Living Room,
- * Dusty Nook, Slant Street, Council Office, The Frog and Barnacle) are
- * streets, rooms, or buildings with no single node number.
- * Once both endpoints of a shortcut are verified, add it to `edges` as
- * `{ nodes: [a, b], weight: <seconds>, detectiveMilestone: <milestone> }`.
+ * Every endpoint is its own graph node at its measured in-game position
+ * (nodePositions.js, measured 2026-11-18): the four street endpoints
+ * (107, 80, 48, 67) and six spot nodes (120-125), each of the latter
+ * connected to its nearest market by a short walk edge in `edges`. The
+ * wiki's map glyphs sit a few units off the real teleport triggers, so
+ * the measurements override them.
+ *   Cellar     120 (Unicorn Farm) <-> 107 (Snag Alley)
+ *   Sewer      48 (Tanners Road) <-> 80 (Sludge Street)
+ *   Painting   125 (Bert's Gallery) <-> 121 (Fillan's Living Room)
+ *   Manhole    67 (Slant Street) <-> 122 (Dusty Nook)
+ *   Trapdoor   124 (The Frog and Barnacle) <-> 123 (Council Office)
  */
 export const cityShortcuts = [
-  { name: "Cellar", milestone: 5, rooms: ["Unicorn Farm", "Snag Alley"] },
-  { name: "Sewer", milestone: 6, rooms: ["Sludge Street", "Tanners Road"] },
+  {
+    name: "Cellar",
+    milestone: 5,
+    endpoints: [
+      { node: 120, room: "Unicorn Farm" },
+      { node: 107, room: "Snag Alley" },
+    ],
+  },
+  {
+    name: "Sewer",
+    milestone: 6,
+    endpoints: [
+      { node: 48, room: "Tanners Road" },
+      { node: 80, room: "Sludge Street" },
+    ],
+  },
   {
     name: "Painting",
     milestone: 7,
-    rooms: ["Fillan's Living Room", "Bert's Gallery"],
+    endpoints: [
+      { node: 125, room: "Bert's Gallery" },
+      { node: 121, room: "Fillan's Living Room" },
+    ],
   },
-  { name: "Manhole", milestone: 8, rooms: ["Dusty Nook", "Slant Street"] },
+  {
+    name: "Manhole",
+    milestone: 8,
+    endpoints: [
+      { node: 67, room: "Slant Street" },
+      { node: 122, room: "Dusty Nook" },
+    ],
+  },
   {
     name: "Trapdoor",
     milestone: 9,
-    rooms: ["Council Office", "The Frog and Barnacle"],
+    endpoints: [
+      { node: 124, room: "The Frog and Barnacle" },
+      { node: 123, room: "Council Office" },
+    ],
   },
 ];
+
+/**
+ * Crime Den Raids are Detective activities in Crenopolis: five dens, each
+ * with two rooms. Once a den's rooms have been raided they become a shortcut
+ * between the two streets it connects: each room is its own graph node
+ * (`denRooms`) and each passage is a street → room → street pair of
+ * `crimeDen` edges in `edges`.
+ * An edge is only usable when the player's Detective milestone and level
+ * meet the den's requirement AND the player has ticked the den in
+ * Configuration, because clearing a den needs combat level too.
+ * Source: https://brightershoreswiki.org/w/Crime_Den_Raids
+ */
+export const crimeDens = [
+  {
+    key: "SMUGGLERS",
+    name: "Smugglers",
+    milestone: 0,
+    level: 28,
+    rooms: ["Geld Family Residence", "Geld Family Logistics"],
+    connects: ["Waterfront Market", "Thimble Lane"],
+  },
+  {
+    key: "COUNTERFEITERS",
+    name: "Counterfeiters",
+    milestone: 1,
+    level: 33,
+    rooms: ["Dilapidated Warehouse", "Slant Street Cart House"],
+    connects: ["West Player Market", "Slant Street"],
+  },
+  {
+    key: "BURGLARS",
+    name: "Burglars",
+    milestone: 2,
+    level: 33,
+    rooms: ["Market Chambers", "Oscen's Warehouse"],
+    connects: ["South Player Market", "Ratmore Road"],
+  },
+  {
+    key: "MUGGERS",
+    name: "Muggers",
+    milestone: 3,
+    level: 33,
+    rooms: ["Four Winds Backroom", "Four Winds Side Room"],
+    connects: ["Four Winds Bar", "Snag Alley"],
+  },
+  {
+    key: "GANGSTERS",
+    name: "Gangsters",
+    milestone: 4,
+    level: 33,
+    rooms: ["Gillad's House", "The Quill Club"],
+    connects: ["Peacock Road Central", "Dawkin Court"],
+  },
+];
+
+/**
+ * The ten den rooms as graph nodes (126-135): each passage in `edges` is a
+ * street → room node → street pair through its room node, whose position is
+ * the room's wiki polygon centre (nodePositions.js, generated). The route
+ * map draws the walk line through the room and marks the den dot there.
+ *
+ * Which passage goes through which room follows the order of each den's
+ * `rooms` array — not yet confirmed in-game; re-check against the game map.
+ */
+export const denRooms = [
+  { node: 126, den: "SMUGGLERS", room: "Geld Family Residence" },
+  { node: 127, den: "SMUGGLERS", room: "Geld Family Logistics" },
+  { node: 128, den: "COUNTERFEITERS", room: "Dilapidated Warehouse" },
+  { node: 129, den: "COUNTERFEITERS", room: "Slant Street Cart House" },
+  { node: 130, den: "BURGLARS", room: "Market Chambers" },
+  { node: 131, den: "BURGLARS", room: "Oscen's Warehouse" },
+  { node: 132, den: "MUGGERS", room: "Four Winds Backroom" },
+  { node: 133, den: "MUGGERS", room: "Four Winds Side Room" },
+  { node: 134, den: "GANGSTERS", room: "Gillad's House" },
+  { node: 135, den: "GANGSTERS", room: "The Quill Club" },
+];
+
+/**
+ * Rooms that open as passages once a quest is complete: each is its own
+ * graph node at the room's wiki polygon centre (nodePositions.js,
+ * generated), and its passage in `edges` is a street → room node → street
+ * pair of `quest` edges, usable only when the quest is done. The route map
+ * bends the walk line through the room.
+ */
+export const questRooms = [
+  { node: 136, room: "Abandoned Alleyway", quest: "BATTLE_OF_FORTUNEHOLD" },
+];
+
+/**
+ * Whether a Detective milestone and level meet a den's requirement. The same
+ * comparison as {@link getEnabledCrimeDens} uses for bounties (see
+ * `isBountyAvailable` in SelectBounties): a higher milestone beats any level
+ * within it. Empty, undefined and null inputs count as 0, matching the
+ * settings inputs while a field is blank.
+ * @param den A den from {@link crimeDens}
+ * @param detectiveMilestone The player's Detective milestone (0-9)
+ * @param detectiveLevel The player's level within the milestone (0-99)
+ * @returns {boolean} True if the requirement is met
+ */
+export const meetsCrimeDenRequirement = (
+  den,
+  detectiveMilestone,
+  detectiveLevel,
+) => {
+  const milestone =
+    detectiveMilestone === "" ||
+    detectiveMilestone === undefined ||
+    detectiveMilestone === null
+      ? 0
+      : detectiveMilestone;
+  const level =
+    detectiveLevel === "" ||
+    detectiveLevel === undefined ||
+    detectiveLevel === null
+      ? 0
+      : detectiveLevel;
+
+  return (
+    den.milestone < milestone ||
+    (den.milestone === milestone && den.level <= level)
+  );
+};
+
+/**
+ * Determines which crime dens are usable as shortcuts: the den is ticked by
+ * the player and its Detective requirement is met.
+ * @param crimeDenToggles Object of { [key from {@link crimeDens}]: boolean }
+ *   The player's per-den "I can clear this den" toggles; a missing key is off.
+ * @param detectiveMilestone The player's Detective milestone (0-9)
+ * @param detectiveLevel The player's level within the milestone (0-99)
+ * @returns {string[]} Keys from {@link crimeDens} whose edges may be used
+ */
+export const getEnabledCrimeDens = (
+  crimeDenToggles,
+  detectiveMilestone,
+  detectiveLevel,
+) => {
+  const toggles = crimeDenToggles ?? {};
+  return crimeDens
+    .filter(
+      (den) =>
+        toggles[den.key] === true &&
+        meetsCrimeDenRequirement(den, detectiveMilestone, detectiveLevel),
+    )
+    .map((den) => den.key);
+};
+
+/**
+ * Removes den toggles whose Detective requirement is no longer met, so a
+ * checked den can never sit below its cutoff (the player may no longer have
+ * the level needed to clear it). Reuses {@link getEnabledCrimeDens}: what is
+ * kept is exactly what is enabled.
+ * @param crimeDenToggles Object of { [key from {@link crimeDens}]: boolean }
+ *   The player's per-den "I can clear this den" toggles; a missing key is off.
+ * @param detectiveMilestone The player's Detective milestone (0-9)
+ * @param detectiveLevel The player's level within the milestone (0-99)
+ * @returns {Object.<string, boolean>} The toggles to keep, all true
+ */
+export const pruneCrimeDenToggles = (
+  crimeDenToggles,
+  detectiveMilestone,
+  detectiveLevel,
+) => {
+  const kept = {};
+  for (const key of getEnabledCrimeDens(
+    crimeDenToggles,
+    detectiveMilestone,
+    detectiveLevel,
+  )) {
+    kept[key] = true;
+  }
+  return kept;
+};

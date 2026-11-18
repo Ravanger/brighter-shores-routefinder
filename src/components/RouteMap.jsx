@@ -4,8 +4,15 @@ import {
   buildRouteSteps,
   formatStopNumbers,
 } from "../algorithm/routeMapData.js";
+import Legend from "./Legend.jsx";
 import { nodePositions } from "../algorithm/nodePositions.js";
-import { bountyBoard, expressBountyBoard as expressBoard } from "../algorithm/nodes.js";
+import {
+  bountyBoard,
+  cityShortcuts,
+  crimeDens,
+  denRooms,
+  expressBountyBoard as expressBoard,
+} from "../algorithm/nodes.js";
 import {
   WIKI_IMAGE_BOUNDS,
   WIKI_MAX_NATIVE_ZOOM,
@@ -43,12 +50,17 @@ const startIcon = (L) =>
     iconAnchor: [8, 8],
   });
 
+// Den display names by key, for the debug overlay's tooltips.
+const denNameByKey = new Map(crimeDens.map((den) => [den.key, den.name]));
+
 /**
  * The planned route on the Brighter Shores wiki map: tiles from the wiki,
  * the route as a polyline, numbered stop markers. The full route is shown
- * statically — no playback, no animation. Leaflet is loaded dynamically
- * so the server render (and the render test) never touches the DOM: it
- * only renders the container and legend.
+ * statically — no playback, no animation. `overlays` (toggled by the
+ * OverlayToggles panel above the map) adds every City Shortcut teleport
+ * spot and every crime den room, whether or not the route uses them.
+ * Leaflet is loaded dynamically so the server render (and the render test)
+ * never touches the DOM: it only renders the container and legend.
  */
 const RouteMap = ({
   actions,
@@ -56,7 +68,9 @@ const RouteMap = ({
   battleOfFortuneholdCompleted,
   roundTrip,
   expressBountyBoard = false,
+  enabledCrimeDens = [],
   positions = nodePositions,
+  overlays = { shortcuts: false, dens: false },
 }) => {
   const board = expressBountyBoard ? expressBoard : bountyBoard;
   const geometry = useMemo(
@@ -68,6 +82,7 @@ const RouteMap = ({
         roundTrip,
         positions,
         board,
+        enabledCrimeDens,
       ),
     [
       actions,
@@ -76,6 +91,7 @@ const RouteMap = ({
       roundTrip,
       positions,
       board,
+      enabledCrimeDens,
     ],
   );
   const route = useMemo(
@@ -83,6 +99,26 @@ const RouteMap = ({
       geometry ? buildRouteSteps(geometry, actions, roundTrip, positions) : null,
     [geometry, actions, roundTrip, positions],
   );
+
+  // All ten shortcut teleport spots at their node positions.
+  const shortcutSpots = useMemo(() => {
+    const spots = [];
+    for (const shortcut of cityShortcuts) {
+      for (const endpoint of shortcut.endpoints) {
+        const position = positions[endpoint.node];
+        if (!position) {
+          continue;
+        }
+        spots.push({
+          name: shortcut.name,
+          room: endpoint.room,
+          x: position[0],
+          y: position[1],
+        });
+      }
+    }
+    return spots;
+  }, [positions]);
 
   const [leaflet, setLeaflet] = useState(null);
   const containerRef = useRef(null);
@@ -140,6 +176,9 @@ const RouteMap = ({
       attribution:
         'Tiles and positions: <a href="https://brightershoreswiki.org/w/Map">Brighter Shores Wiki</a>',
     }).addTo(map);
+    // The legend overlays the map's bottom-right corner, so keep the
+    // tile attribution out of it.
+    map.attributionControl.setPosition("bottomleft");
     // Stop-name labels: hidden at low zoom, shown when zoomed in (see
     // routeLabelZoomClass and the .route-stop-label rules in index.css).
     const updateLabels = () => {
@@ -208,16 +247,107 @@ const RouteMap = ({
     layers.clearLayers();
     const { routePoints, places } = route;
 
-    // Full route: solid for walking, dashed for teleports.
+    // Full route: solid for walking, dashed grey for teleports, dashed
+    // purple for City Shortcut crossings. Jump legs carry a hover tooltip
+    // naming the shortcut or portal stone (pill styling and fade-in live
+    // in index.css).
     for (let i = 1; i < routePoints.length; i++) {
       const a = routePoints[i - 1];
       const b = routePoints[i];
-      L.polyline(
-        [a.latLng, b.latLng],
-        b.dashed
-          ? { color: "#52525b", weight: 4, dashArray: "8 6" }
-          : { color: "#2563eb", weight: 4 },
-      ).addTo(layers);
+      const style =
+        b.kind === "shortcut"
+          ? { color: "#7c3aed", weight: 4, dashArray: "8 6" }
+          : b.kind === "teleport"
+            ? { color: "#52525b", weight: 4, dashArray: "8 6" }
+            : { color: "#2563eb", weight: 4 };
+      const line = L.polyline([a.latLng, b.latLng], style);
+      if (b.name) {
+        line.bindTooltip(
+          `<span class="route-jump-type">${
+            b.kind === "shortcut" ? "City Shortcut" : "Teleport"
+          }</span>${b.name}`,
+          {
+            sticky: true,
+            className: `route-jump-tooltip route-jump-tooltip--${b.kind}`,
+          },
+        );
+      }
+      line.addTo(layers);
+    }
+
+    // Jump stops: a plain dot at each portal stone and shortcut teleport
+    // spot the route uses (grey for teleports, purple for shortcuts).
+    // Drawn before the markers so a numbered stop on the same spot covers
+    // it.
+    for (const jump of geometry.jumps) {
+      L.circleMarker(wikiToLatLng([jump.x, jump.y]), {
+        radius: 5,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: jump.kind === "shortcut" ? "#7c3aed" : "#52525b",
+        fillOpacity: 1,
+        interactive: false,
+      }).addTo(layers);
+    }
+
+    // Crime den rooms the route walks through: a red dot at each room's own
+    // position (the walk line bends through it), with a hover pill naming
+    // the den and room. Drawn before the markers so a numbered stop on the
+    // same spot covers it.
+    for (const den of geometry.dens) {
+      const marker = L.circleMarker(wikiToLatLng([den.x, den.y]), {
+        radius: 5,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: "#dc2626",
+        fillOpacity: 1,
+      });
+      marker.bindTooltip(
+        `<span class="route-jump-type">Crime Den</span>${den.name} — ${den.room}`,
+        { className: "route-jump-tooltip route-jump-tooltip--den" },
+      );
+      marker.addTo(layers);
+    }
+
+    // Extra map layers (toggled above the map): every City Shortcut
+    // teleport spot and every crime den room, whether or not the route
+    // uses them. Smaller than the route's own dots; drawn before the
+    // markers so a numbered stop on the same spot covers it.
+    if (overlays.shortcuts) {
+      for (const spot of shortcutSpots) {
+        const marker = L.circleMarker(wikiToLatLng([spot.x, spot.y]), {
+          radius: 4,
+          color: "#ffffff",
+          weight: 2,
+          fillColor: "#7c3aed",
+          fillOpacity: 1,
+        });
+        marker.bindTooltip(
+          `<span class="route-jump-type">City Shortcut</span>${spot.room} — ${spot.name}`,
+          { className: "route-jump-tooltip route-jump-tooltip--shortcut" },
+        );
+        marker.addTo(layers);
+      }
+    }
+    if (overlays.dens) {
+      for (const room of denRooms) {
+        const position = positions[room.node];
+        if (!position) {
+          continue;
+        }
+        const marker = L.circleMarker(wikiToLatLng([position[0], position[1]]), {
+          radius: 4,
+          color: "#ffffff",
+          weight: 2,
+          fillColor: "#dc2626",
+          fillOpacity: 1,
+        });
+        marker.bindTooltip(
+          `<span class="route-jump-type">Crime Den</span>${denNameByKey.get(room.den)} — ${room.room}`,
+          { className: "route-jump-tooltip route-jump-tooltip--den" },
+        );
+        marker.addTo(layers);
+      }
     }
 
     if (geometry.start) {
@@ -245,7 +375,7 @@ const RouteMap = ({
       });
       marker.addTo(layers);
     }
-  }, [leaflet, route, geometry]);
+  }, [leaflet, route, geometry, overlays, shortcutSpots, positions]);
 
   if (!geometry || !route) {
     return null;
@@ -253,16 +383,19 @@ const RouteMap = ({
 
   return (
     <div className="my-7">
-      <div
-        ref={containerRef}
-        className="h-[420px] w-full overflow-hidden rounded"
-        role="application"
-        aria-label="Route map"
-      />
-      <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">
-        Legend: green dot is the start, a numbered circle is a stop, a dashed
-        line is a teleport.
-      </p>
+      <div className="relative">
+        <div
+          ref={containerRef}
+          className="h-[420px] w-full overflow-hidden rounded"
+          role="application"
+          aria-label="Route map"
+        />
+        {/* Collapsible legend, pinned to the map's bottom-right corner: it
+            expands upward over the map when opened. */}
+        <div className="absolute bottom-2 right-2 z-[1000]">
+          <Legend />
+        </div>
+      </div>
     </div>
   );
 };

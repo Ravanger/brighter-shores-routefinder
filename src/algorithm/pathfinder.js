@@ -3,8 +3,47 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import GPS from "./gps.js";
 import combinations from "./combinations.js";
 import { BountyStatus } from "./bounties.js";
-import { bountyBoard, expressBountyBoard as expressBoard, portals } from "./nodes.js";
+import {
+  bountyBoard,
+  crimeDens,
+  edges,
+  expressBountyBoard as expressBoard,
+  portals,
+} from "./nodes.js";
 import { bounties as bountyData } from "./bounties.js";
+
+// Crime den half-edges by "a>b" and "b>a" (they are undirected), for
+// labeling the steps through raided den rooms in travel paths. A passage is
+// two consecutive half-steps around its room node; #addTravelSteps merges
+// them into a single action at the passage's full weight.
+const crimeDenSteps = new Map();
+for (const edge of edges) {
+  if (!edge.crimeDen) {
+    continue;
+  }
+  const den = crimeDens.find((den) => den.key === edge.crimeDen);
+  const [a, b] = edge.nodes;
+  crimeDenSteps.set(`${a}>${b}`, { name: den.name, weight: edge.weight });
+  crimeDenSteps.set(`${b}>${a}`, { name: den.name, weight: edge.weight });
+}
+
+// City Shortcut edges by "a>b" and "b>a" (they are undirected), for labeling
+// the teleport steps across a shortcut in travel paths.
+const cityShortcutSteps = new Map();
+for (const edge of edges) {
+  if (!edge.cityShortcut) {
+    continue;
+  }
+  const [a, b] = edge.nodes;
+  cityShortcutSteps.set(`${a}>${b}`, {
+    name: edge.cityShortcut,
+    weight: edge.weight,
+  });
+  cityShortcutSteps.set(`${b}>${a}`, {
+    name: edge.cityShortcut,
+    weight: edge.weight,
+  });
+}
 
 /**
  * Determines the best route to take to make all deliveries
@@ -28,6 +67,7 @@ class Pathfinder {
    * @param battleOfFortuneholdCompleted Whether the player has completed the Battle of Fortunehold quest which unlocks an additional room
    * @param roundTrip Whether to return to the bounty board after completing all deliveries
    * @param expressBountyBoard Whether to start at the Express Bounty Board in the South Player Market instead of the Guild Bounty Board
+   * @param enabledCrimeDens Keys from {@link crimeDens} the player has unlocked and can clear (see {@link getEnabledCrimeDens})
    * @returns {
    *     {bounties: string[]},    // An array of keys from {@link bountyData} representing the best bounties to complete
    *     {actions:    string[]},  // An array of actions to take to complete the deliveries
@@ -41,6 +81,7 @@ class Pathfinder {
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard = false,
+    enabledCrimeDens = [],
   ) {
     const result = {
       bounties: [],
@@ -49,7 +90,11 @@ class Pathfinder {
       experience: 0,
     };
 
-    const gps = new GPS(detectiveMilestone, battleOfFortuneholdCompleted);
+    const gps = new GPS(
+      detectiveMilestone,
+      battleOfFortuneholdCompleted,
+      enabledCrimeDens,
+    );
     const board = expressBountyBoard ? expressBoard : bountyBoard;
 
     const allBounties = [...currentBounties, ...availableBounties];
@@ -327,7 +372,41 @@ class Pathfinder {
     const currentDistance =
       actions.length > 0 ? actions[actions.length - 1].distance : 0;
 
-    for (let i = 1; i < path.length - 1; i++) {
+    for (let i = 1; i < path.length; i++) {
+      // A step through a raided crime den room is its own line item, like a
+      // teleport. A passage is two half-steps around its room node (street →
+      // room → street); report the whole passage once, at its full weight.
+      const denStep = crimeDenSteps.get(`${path[i - 1]}>${path[i]}`);
+      if (denStep) {
+        let weight = denStep.weight;
+        if (i + 1 < path.length && crimeDenSteps.has(`${path[i]}>${path[i + 1]}`)) {
+          weight += crimeDenSteps.get(`${path[i]}>${path[i + 1]}`).weight;
+          i++; // The second half-step is the same passage.
+        }
+        actions.push({
+          type: "den",
+          location: denStep.name,
+          distance: currentDistance + weight,
+        });
+        continue;
+      }
+
+      // A step across a City Shortcut is its own line item, like a teleport
+      const shortcutStep = cityShortcutSteps.get(`${path[i - 1]}>${path[i]}`);
+      if (shortcutStep && this.includeTeleportSteps) {
+        actions.push({
+          type: "shortcut",
+          location: shortcutStep.name,
+          distance: currentDistance + shortcutStep.weight,
+        });
+        continue;
+      }
+
+      // The destination node is not a travel step
+      if (i === path.length - 1) {
+        continue;
+      }
+
       if (
         this.includeTeleportSteps &&
         path[i] === portals.CRENOPOLIS_MARKET.node

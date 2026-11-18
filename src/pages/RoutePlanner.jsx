@@ -7,7 +7,9 @@ import Paragraph from "../components/Paragraph.jsx";
 import InternalLink from "../components/InternalLink.jsx";
 import Bounty from "../components/Bounty.jsx";
 import RouteMap from "../components/RouteMap.jsx";
+import OverlayToggles from "../components/OverlayToggles.jsx";
 import { assignStopNumbers } from "../algorithm/routeMapData.js";
+import { getEnabledCrimeDens } from "../algorithm/nodes.js";
 
 const worker = new Worker(new URL("../algorithm/worker.js", import.meta.url), {
   type: "module",
@@ -33,6 +35,9 @@ const RoutePlanner = () => {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState({});
 
+  // Extra map layers (all shortcut spots / all den rooms), off by default.
+  const [overlays, setOverlays] = useState({ shortcuts: false, dens: false });
+
   const { selectedBounties: bounties } = useBounties("bountiesV2");
   const { selectedBounties: availableBounties } = useBounties(
     "availableBountiesV2",
@@ -40,10 +45,19 @@ const RoutePlanner = () => {
 
   const {
     detectiveMilestone,
+    detectiveLevel,
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard,
+    crimeDens,
   } = useSettings();
+
+  // The crime dens whose rooms can be routed through: ticked by the player
+  // and meeting the Detective requirement (see getEnabledCrimeDens).
+  const enabledCrimeDens = useMemo(
+    () => getEnabledCrimeDens(crimeDens, detectiveMilestone, detectiveLevel),
+    [crimeDens, detectiveMilestone, detectiveLevel],
+  );
 
   // Stop numbers for the actions list, from the same ordering as the map's
   // numbered markers (see assignStopNumbers).
@@ -89,6 +103,7 @@ const RoutePlanner = () => {
       battleOfFortuneholdCompleted,
       roundTrip,
       expressBountyBoard,
+      enabledCrimeDens,
     };
 
     console.log("message", message);
@@ -101,6 +116,7 @@ const RoutePlanner = () => {
     battleOfFortuneholdCompleted,
     roundTrip,
     expressBountyBoard,
+    enabledCrimeDens,
   ]);
 
   const bountiesToAbandon = useMemo(() => {
@@ -222,13 +238,20 @@ const RoutePlanner = () => {
       ) : null}
 
       {result?.actions?.length ? (
-        <RouteMap
-          actions={result.actions}
-          detectiveMilestone={detectiveMilestone === "" ? 0 : detectiveMilestone}
-          battleOfFortuneholdCompleted={battleOfFortuneholdCompleted}
-          roundTrip={roundTrip}
-          expressBountyBoard={expressBountyBoard}
-        />
+        <>
+          <div className="flex justify-end mb-2">
+            <OverlayToggles overlays={overlays} onChange={setOverlays} />
+          </div>
+          <RouteMap
+            actions={result.actions}
+            detectiveMilestone={detectiveMilestone === "" ? 0 : detectiveMilestone}
+            battleOfFortuneholdCompleted={battleOfFortuneholdCompleted}
+            roundTrip={roundTrip}
+            expressBountyBoard={expressBountyBoard}
+            enabledCrimeDens={enabledCrimeDens}
+            overlays={overlays}
+          />
+        </>
       ) : null}
 
       {result?.actions?.length ? (
@@ -254,22 +277,30 @@ const RoutePlanner = () => {
               </tr>
             </thead>
             <tbody>
-              {result.actions.map((action, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-100 dark:border-zinc-700 last:border-none dark:text-zinc-200"
-                >
-                  <td className="py-3">{stopNumbers[index] ?? ""}</td>
-                  <td className="py-3 capitalize">{action.type}</td>
-                  <td className="py-3">
-                    {action.item ? <Bounty bountyKey={action.item} /> : "-"}
-                  </td>
-                  <td className="py-3 text-right">{action.location}</td>
-                  <td className="py-3 text-right">
-                    {formatTime(Math.round(action.distance))}
-                  </td>
-                </tr>
-              ))}
+              {result.actions.map((action, index) => {
+                // Teleports, crime den rooms and city shortcuts are travel
+                // steps, not stops: dim them
+                const dimmed =
+                  action.type === "teleport" ||
+                  action.type === "den" ||
+                  action.type === "shortcut";
+                return (
+                  <tr
+                    key={index}
+                    className={`border-b border-gray-100 dark:border-zinc-700 last:border-none ${dimmed ? "text-gray-400 dark:text-zinc-500" : "dark:text-zinc-200"}`}
+                  >
+                    <td className="py-3">{stopNumbers[index] ?? ""}</td>
+                    <td className="py-3 capitalize">{action.type}</td>
+                    <td className="py-3">
+                      {action.item ? <Bounty bountyKey={action.item} /> : "-"}
+                    </td>
+                    <td className="py-3 text-right">{action.location}</td>
+                    <td className="py-3 text-right">
+                      {formatTime(Math.round(action.distance))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

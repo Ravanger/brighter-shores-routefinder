@@ -32,10 +32,14 @@ test("renders the map container and legend, with no playback controls", () => {
   assert.doesNotMatch(html, />Next</);
   assert.doesNotMatch(html, />Replay</);
   assert.doesNotMatch(html, /Start at Guild Bounty Board/); // no step caption
-  assert.match(html, /green dot is the start/); // legend
-  assert.match(html, /a numbered circle is a stop/);
-  assert.match(html, /a dashed line is a teleport/);
-  assert.doesNotMatch(html, /<svg/); // no schematic anymore
+  // The legend is pinned to the map's corner, collapsed by default: just a
+  // button, no swatches until expanded (see Legend.test.mjs).
+  assert.match(html, />Legend ▴</);
+  assert.match(html, /aria-expanded="false"/);
+  assert.doesNotMatch(html, /<svg /);
+
+  // The overlay toggles live above the map (RoutePlanner), not in it.
+  assert.doesNotMatch(html, />Overlays</);
 });
 
 test("renders nothing when no stop has a position", () => {

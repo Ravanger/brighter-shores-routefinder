@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   extractGeojsonModules,
+  resolveDenRooms,
   resolvePositions,
+  resolveQuestRooms,
+  resolveShortcutEndpoints,
 } from "./generateNodePositions.mjs";
 
 // A synthetic slice of the gadget bundle: the data modules are
@@ -10,6 +13,7 @@ import {
 const bundle = `
   582:e=>{"use strict";e.exports=JSON.parse('{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"Greengrocers","category":"Room","episode":"Episode 1"},"geometry":{"type":"Polygon","coordinates":[[[340,53],[342,53],[342,55],[340,55],[340,53]]]}}]}')},
   207:e=>{"use strict";e.exports=JSON.parse('{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"Bubbles MacLeish","category":"Entity","size":[1,1],"classes":["icon-merchant"]},"geometry":{"type":"Point","coordinates":[360,8]}},{"type":"Feature","properties":{"name":"Hermar","category":"Entity","size":[1,1],"classes":["icon-merchant"]},"geometry":{"type":"Point","coordinates":[319,58]}},{"type":"Feature","properties":{"name":"Hermar","category":"Entity","size":[1,1],"classes":["icon-talk","theme-merchant"]},"geometry":{"type":"Point","coordinates":[474,16]}}]}')},
+  314:e=>{"use strict";e.exports=JSON.parse('[{"coordinates":[[0,100],[2,104]],"link":"Cellar City Shortcut"},{"coordinates":[[30,50],[32,54]],"link":"Cellar City Shortcut"}]')},
   999:e=>{"use strict";e.exports=JSON.parse('{"some":"config"}')},
 `;
 
@@ -73,4 +77,127 @@ test("reports unresolved positions instead of guessing", () => {
   assert.ok(
     unresolved.some((line) => /Hermar's Homeware.*No Such Room/.test(line)),
   );
+});
+
+// The fixture's Cellar glyphs transform to wiki [102.16, 2.42] and
+// [52.19, 32.35]; only the first lies in a room of the fixture, so it is
+// the one that can be resolved.
+test("resolves shortcut endpoint nodes to their glyph in the room", () => {
+  const geojson = extractGeojsonModules(bundle);
+
+  assert.equal(geojson.segments.length, 2);
+
+  const { entries, unresolved } = resolveShortcutEndpoints(geojson, [
+    { node: 107, shortcut: "Cellar", room: "No Such Room" },
+  ]);
+  assert.deepEqual(entries, []);
+  assert.equal(unresolved.length, 1);
+
+  // A room containing the first glyph's transformed midpoint resolves it.
+  const withRoom = { ...geojson };
+  withRoom.rooms.push({
+    properties: { name: "Snag Alley" },
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [100, 0],
+          [105, 0],
+          [105, 5],
+          [100, 5],
+          [100, 0],
+        ],
+      ],
+    },
+  });
+  const resolved = resolveShortcutEndpoints(withRoom, [
+    { node: 107, shortcut: "Cellar", room: "Snag Alley" },
+  ]);
+  assert.deepEqual(resolved.unresolved, []);
+  assert.deepEqual(resolved.entries, [
+    {
+      name: "Snag Alley",
+      node: 107,
+      position: [102.16, 2.42],
+      note: "Cellar City Shortcut glyph (teleport spot)",
+    },
+  ]);
+});
+
+test("reports shortcut endpoints it cannot resolve", () => {
+  const geojson = extractGeojsonModules(bundle);
+  const { entries, unresolved } = resolveShortcutEndpoints(geojson, [
+    // No glyphs for this shortcut name.
+    { node: 48, shortcut: "Missing", room: "Snag Alley" },
+  ]);
+  assert.deepEqual(entries, []);
+  assert.equal(unresolved.length, 1);
+  assert.ok(/expected 2/.test(unresolved[0]));
+});
+
+// Spots sit at doorways: a glyph just outside its room's ring (within the
+// boundary tolerance) still resolves to that room.
+test("resolves a spot glyph sitting on its room's boundary", () => {
+  const geojson = extractGeojsonModules(bundle);
+  // The first fixture glyph transforms to [102.16, 2.42]; this room's ring
+  // lies 2.58u below it — outside the polygon, within the tolerance.
+  geojson.rooms.push({
+    properties: { name: "Doorway" },
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [102.16, 5],
+          [107, 5],
+          [107, 8],
+          [102.16, 8],
+          [102.16, 5],
+        ],
+      ],
+    },
+  });
+
+  const { entries, unresolved } = resolveShortcutEndpoints(geojson, [
+    { node: 107, shortcut: "Cellar", room: "Doorway" },
+  ]);
+  assert.deepEqual(unresolved, []);
+  assert.deepEqual(entries, [
+    {
+      name: "Doorway",
+      node: 107,
+      position: [102.16, 2.42],
+      note: "Cellar City Shortcut glyph (teleport spot)",
+    },
+  ]);
+});
+
+// Den rooms resolve to their polygon centroids; a missing room is reported
+// rather than guessed.
+test("resolves den rooms to their polygon centroids", () => {
+  const geojson = extractGeojsonModules(bundle);
+  const dens = [{ key: "FIXTURE", rooms: ["Greengrocers", "No Such Room"] }];
+
+  const { entries, unresolved } = resolveDenRooms(geojson, dens);
+  assert.deepEqual(entries, [
+    { den: "FIXTURE", room: "Greengrocers", position: [341, 54] },
+  ]);
+  assert.equal(unresolved.length, 1);
+  assert.ok(/No Such Room/.test(unresolved[0]));
+});
+
+// Quest rooms resolve to their polygon centroids; a missing room is reported
+// rather than guessed.
+test("resolves quest rooms to their polygon centroids", () => {
+  const geojson = extractGeojsonModules(bundle);
+  const rooms = [
+    { node: 136, room: "Greengrocers", quest: "FIXTURE" },
+    { node: 137, room: "No Such Room", quest: "FIXTURE" },
+  ];
+
+  const { entries, unresolved } = resolveQuestRooms(geojson, rooms);
+  assert.deepEqual(entries, [
+    { quest: "FIXTURE", room: "Greengrocers", position: [341, 54] },
+  ]);
+  assert.equal(unresolved.length, 1);
+  assert.ok(/No Such Room/.test(unresolved[0]));
 });

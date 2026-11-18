@@ -132,3 +132,39 @@ test("reports shortcut endpoints it cannot resolve", () => {
   assert.equal(unresolved.length, 1);
   assert.ok(/expected 2/.test(unresolved[0]));
 });
+
+// Spots sit at doorways: a glyph just outside its room's ring (within the
+// boundary tolerance) still resolves to that room.
+test("resolves a spot glyph sitting on its room's boundary", () => {
+  const geojson = extractGeojsonModules(bundle);
+  // The first fixture glyph transforms to [102.16, 2.42]; this room's ring
+  // lies 2.58u below it — outside the polygon, within the tolerance.
+  geojson.rooms.push({
+    properties: { name: "Doorway" },
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [102.16, 5],
+          [107, 5],
+          [107, 8],
+          [102.16, 8],
+          [102.16, 5],
+        ],
+      ],
+    },
+  });
+
+  const { entries, unresolved } = resolveShortcutEndpoints(geojson, [
+    { node: 107, shortcut: "Cellar", room: "Doorway" },
+  ]);
+  assert.deepEqual(unresolved, []);
+  assert.deepEqual(entries, [
+    {
+      name: "Doorway",
+      node: 107,
+      position: [102.16, 2.42],
+      note: "Cellar City Shortcut glyph (teleport spot)",
+    },
+  ]);
+});

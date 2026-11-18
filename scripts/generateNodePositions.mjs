@@ -2,7 +2,9 @@
 // src/algorithm/nodePositions.js: a node number -> [x, y] map in wiki
 // in-game coords for every market, both bounty boards, the two portal
 // stones and the City Shortcut endpoint nodes without a marker of their
-// own (their position is the shortcut's map glyph in its room).
+// own (their position is the shortcut's map glyph in its room), plus
+// `shortcutSpotPositions`: the actual teleport spot (the shortcut's map
+// glyph) for all ten City Shortcut endpoint nodes.
 //
 // Usage: node scripts/generateNodePositions.mjs
 //
@@ -93,16 +95,24 @@ const MAPPING = {
   },
 };
 
-// City Shortcut endpoint nodes that have no marker of their own (a street
-// or den-door node, not a market): each stands in for the teleport spot, so
-// its position is the shortcut's map glyph in that room. The node numbers
-// are the `cityShortcut` edges in src/algorithm/nodes.js; the rooms are the
-// shortcut's two locations from the wiki variant pages.
-const SHORTCUT_ENDPOINTS = [
-  { node: 107, shortcut: "Cellar", room: "Snag Alley" },
-  { node: 80, shortcut: "Sewer", room: "Sludge Street" },
+// All ten City Shortcut endpoint nodes: each stands in for the teleport
+// spot on its side of the shortcut. The node numbers are the `cityShortcut`
+// edges in src/algorithm/nodes.js; the rooms are the shortcut's two
+// locations from the wiki variant pages. Every resolved spot is recorded in
+// `shortcutSpotPositions`; a spot also becomes a `nodePositions` entry when
+// the node has no marker of its own (a street or den-door node, not a
+// market).
+const SHORTCUT_SPOTS = [
+  { node: 26, shortcut: "Trapdoor", room: "The Frog and Barnacle" },
   { node: 48, shortcut: "Sewer", room: "Tanners Road" },
+  { node: 57, shortcut: "Painting", room: "Bert's Gallery" },
   { node: 67, shortcut: "Manhole", room: "Slant Street" },
+  { node: 71, shortcut: "Painting", room: "Fillan's Living Room" },
+  { node: 80, shortcut: "Sewer", room: "Sludge Street" },
+  { node: 83, shortcut: "Trapdoor", room: "Council Office" },
+  { node: 84, shortcut: "Cellar", room: "Unicorn Farm" },
+  { node: 107, shortcut: "Cellar", room: "Snag Alley" },
+  { node: 118, shortcut: "Manhole", room: "Dusty Nook" },
 ];
 
 // The marker segments are stored in the map image's own coordinate space
@@ -348,19 +358,50 @@ const pointInRing = (point, ring) => {
   return inside;
 };
 
+// Shortest distance from a point to a ring's edges (the ring is closed).
+const distToRing = (point, ring) => {
+  let best = Infinity;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[i + 1];
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const t = Math.max(
+      0,
+      Math.min(
+        1,
+        ((point[0] - x1) * dx + (point[1] - y1) * dy) / (dx * dx + dy * dy),
+      ),
+    );
+    best = Math.min(
+      best,
+      Math.hypot(point[0] - (x1 + t * dx), point[1] - (y1 + t * dy)),
+    );
+  }
+  return best;
+};
+
+// Teleport spots sit at doorways: some lie inside their room, some just
+// outside it, on the boundary between rooms. A glyph counts as in its room
+// when it is inside the ring or within this distance of it. The other
+// endpoint's glyph is always 80u+ away, so the "exactly one" check below
+// stays unambiguous.
+const SPOT_BOUNDARY_TOLERANCE = 3;
+
 /**
- * Resolve the City Shortcut endpoint nodes without a marker of their own
- * ({@link SHORTCUT_ENDPOINTS}) to the shortcut's map glyph in its room.
- * Each shortcut has exactly two glyphs ("<Name> City Shortcut"); the one
- * whose midpoint lies in the endpoint's room is that endpoint's spot.
- * Nothing is guessed: anything unresolved is reported in `unresolved`.
+ * Resolve every City Shortcut endpoint node ({@link SHORTCUT_SPOTS}) to the
+ * shortcut's map glyph in its room. Each shortcut has exactly two glyphs
+ * ("<Name> City Shortcut"); the one inside the endpoint's room, or on/near
+ * its ring (see SPOT_BOUNDARY_TOLERANCE), is that endpoint's spot — spots
+ * sit at doorways, so they can lie just outside the room polygon. Nothing
+ * is guessed: anything unresolved is reported in `unresolved`.
  * @param geojson {rooms, entities, segments} from {@link extractGeojsonModules}
- * @param endpoints [{node: number, shortcut: string, room: string}] (defaults to SHORTCUT_ENDPOINTS)
+ * @param endpoints [{node: number, shortcut: string, room: string}] (defaults to SHORTCUT_SPOTS)
  * @returns {{entries: {name: string, node: number, position: number[], note: string}[], unresolved: string[]}}
  */
 export const resolveShortcutEndpoints = (
   geojson,
-  endpoints = SHORTCUT_ENDPOINTS,
+  endpoints = SHORTCUT_SPOTS,
 ) => {
   const roomByName = new Map(
     geojson.rooms.map((room) => [room.properties?.name, room]),
@@ -389,9 +430,12 @@ export const resolveShortcutEndpoints = (
         (glyph.coordinates[0][0] + glyph.coordinates[1][0]) / 2,
         (glyph.coordinates[0][1] + glyph.coordinates[1][1]) / 2,
       ];
+      const wiki = segmentToWiki(mid);
       return {
-        wiki: segmentToWiki(mid),
-        inRoom: pointInRing(segmentToWiki(mid), ring),
+        wiki,
+        inRoom:
+          pointInRing(wiki, ring) ||
+          distToRing(wiki, ring) <= SPOT_BOUNDARY_TOLERANCE,
       };
     });
     const matches = inside.filter((g) => g.inRoom);
@@ -425,12 +469,16 @@ const main = async () => {
         `${geojson.rooms.length} rooms, ${geojson.entities.length} entities`,
     );
   }
-  const markets = resolvePositions(geojson);
+  const marketEntries = resolvePositions(geojson);
   const shortcuts = resolveShortcutEndpoints(geojson);
-  const entries = [...markets.entries, ...shortcuts.entries].sort(
-    (a, b) => a.node - b.node,
-  );
-  const unresolved = [...markets.unresolved, ...shortcuts.unresolved];
+  // A spot only becomes a node position when the node has no marker of its
+  // own (a street or den-door node, not a market).
+  const marketNodes = new Set(Object.values(markets).map((m) => m.node));
+  const entries = [
+    ...marketEntries.entries,
+    ...shortcuts.entries.filter((entry) => !marketNodes.has(entry.node)),
+  ].sort((a, b) => a.node - b.node);
+  const unresolved = [...marketEntries.unresolved, ...shortcuts.unresolved];
 
   if (unresolved.length > 0) {
     console.error("Could not resolve positions for:");
@@ -440,10 +488,8 @@ const main = async () => {
     process.exit(1);
   }
 
-  const lines = entries.map(
-    (entry) =>
-      `  ${entry.node}: [${entry.position.join(", ")}], // ${entry.name} — ${entry.note}`,
-  );
+  const formatEntry = (entry) =>
+    `  ${entry.node}: [${entry.position.join(", ")}], // ${entry.name} — ${entry.note}`;
 
   const header = `// Generated by \`node scripts/generateNodePositions.mjs\` — do not edit by hand.
 // Source: ${GADGET_URL}
@@ -453,7 +499,14 @@ const main = async () => {
 // it is a shop marker (the shopkeeper NPC's marker inside the room) or a
 // City Shortcut glyph (the teleport spot for a shortcut endpoint node).
 export const nodePositions = {
-${lines.join("\n")}
+${entries.map(formatEntry).join("\n")}
+};
+
+// The actual teleport spot (the shortcut's map glyph) for each of the ten
+// City Shortcut endpoint nodes. Market endpoints stand in at their marker
+// position above; these are where the teleports happen on the map.
+export const shortcutSpotPositions = {
+${shortcuts.entries.map(formatEntry).join("\n")}
 };
 `;
 

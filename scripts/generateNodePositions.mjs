@@ -1,7 +1,8 @@
 // Fetches the Brighter Shores wiki's map data and writes
 // src/algorithm/nodePositions.js: a node number -> [x, y] map in wiki
-// in-game coords for every market, both bounty boards and the two portal
-// stones.
+// in-game coords for every market, both bounty boards, the two portal
+// stones and the City Shortcut endpoint nodes without a marker of their
+// own (their position is the shortcut's map glyph in its room).
 //
 // Usage: node scripts/generateNodePositions.mjs
 //
@@ -92,6 +93,26 @@ const MAPPING = {
   },
 };
 
+// City Shortcut endpoint nodes that have no marker of their own (a street
+// or den-door node, not a market): each stands in for the teleport spot, so
+// its position is the shortcut's map glyph in that room. The node numbers
+// are the `cityShortcut` edges in src/algorithm/nodes.js; the rooms are the
+// shortcut's two locations from the wiki variant pages.
+const SHORTCUT_ENDPOINTS = [
+  { node: 107, shortcut: "Cellar", room: "Snag Alley" },
+  { node: 80, shortcut: "Sewer", room: "Sludge Street" },
+  { node: 48, shortcut: "Sewer", room: "Tanners Road" },
+  { node: 67, shortcut: "Manhole", room: "Slant Street" },
+];
+
+// The marker segments are stored in the map image's own coordinate space
+// (axes swapped relative to in-game coords). This affine transform to wiki
+// in-game [x, y] was fitted against the gadget's room-linked marker
+// segments (median residual < 1.5u) and cross-checked against entity
+// points sharing a segment's link name (e.g. the Sewer Fiend glyphs sit on
+// the Sewer Fiend entity points).
+const segmentToWiki = ([px, py]) => [0.9994 * py + 0.226, 0.9977 * px + 1.422];
+
 const round2 = (value) => Math.round(value * 100) / 100;
 
 // Decode a JavaScript single-quoted string literal's escapes into the
@@ -132,11 +153,12 @@ const decodeJsString = (raw) =>
  * Extract the embedded GeoJSON from the wiki map gadget's JavaScript:
  * every JSON.parse('...') literal is parsed and classified by shape.
  * @param jsText The gadget JavaScript
- * @returns {{rooms: object[], entities: object[]}} Room and entity features
+ * @returns {{rooms: object[], entities: object[], segments: {coordinates: number[][], link: string}[]}} Room and entity features, plus the named marker segments
  */
 export const extractGeojsonModules = (jsText) => {
   const rooms = [];
   const entities = [];
+  const segments = [];
   const marker = "JSON.parse('";
   let from = 0;
   for (;;) {
@@ -164,20 +186,33 @@ export const extractGeojsonModules = (jsText) => {
     } catch {
       continue;
     }
+    // The marker segments are flat {coordinates, link} objects (no
+    // geometry): the wiki's named map glyphs, one short segment each. They
+    // arrive as a bare array, not a FeatureCollection.
+    const isSegment = (item) =>
+      Array.isArray(item?.coordinates) && typeof item.link === "string";
     if (
       parsed?.type === "FeatureCollection" &&
       Array.isArray(parsed.features) &&
       parsed.features.length > 0
     ) {
-      const geometry = parsed.features[0].geometry?.type;
-      if (geometry === "Polygon") {
+      const first = parsed.features[0];
+      if (isSegment(first)) {
+        segments.push(...parsed.features);
+      } else if (first.geometry?.type === "Polygon") {
         rooms.push(...parsed.features);
-      } else if (geometry === "Point") {
+      } else if (first.geometry?.type === "Point") {
         entities.push(...parsed.features);
       }
+    } else if (
+      Array.isArray(parsed) &&
+      parsed.length > 0 &&
+      parsed.every(isSegment)
+    ) {
+      segments.push(...parsed);
     }
   }
-  return { rooms, entities };
+  return { rooms, entities, segments };
 };
 
 // Polygon area centroid (shoelace formula) of the outer ring.
@@ -297,6 +332,87 @@ export const resolvePositions = (geojson, mapping = MAPPING) => {
   return { entries, unresolved };
 };
 
+// Ray-cast point-in-polygon test against a ring's outer boundary.
+const pointInRing = (point, ring) => {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (
+      yi > point[1] !== yj > point[1] &&
+      point[0] < ((xj - xi) * (point[1] - yi)) / (yj - yi) + xi
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+};
+
+/**
+ * Resolve the City Shortcut endpoint nodes without a marker of their own
+ * ({@link SHORTCUT_ENDPOINTS}) to the shortcut's map glyph in its room.
+ * Each shortcut has exactly two glyphs ("<Name> City Shortcut"); the one
+ * whose midpoint lies in the endpoint's room is that endpoint's spot.
+ * Nothing is guessed: anything unresolved is reported in `unresolved`.
+ * @param geojson {rooms, entities, segments} from {@link extractGeojsonModules}
+ * @param endpoints [{node: number, shortcut: string, room: string}] (defaults to SHORTCUT_ENDPOINTS)
+ * @returns {{entries: {name: string, node: number, position: number[], note: string}[], unresolved: string[]}}
+ */
+export const resolveShortcutEndpoints = (
+  geojson,
+  endpoints = SHORTCUT_ENDPOINTS,
+) => {
+  const roomByName = new Map(
+    geojson.rooms.map((room) => [room.properties?.name, room]),
+  );
+  const unresolved = [];
+  const entries = [];
+
+  for (const { node, shortcut, room } of endpoints) {
+    const glyphs = geojson.segments.filter(
+      (segment) => segment.link === `${shortcut} City Shortcut`,
+    );
+    if (glyphs.length !== 2) {
+      unresolved.push(
+        `node ${node}: "${shortcut} City Shortcut" has ${glyphs.length} glyphs, expected 2`,
+      );
+      continue;
+    }
+    const roomFeature = roomByName.get(room);
+    if (!roomFeature || roomFeature.geometry?.type !== "Polygon") {
+      unresolved.push(`node ${node}: room "${room}" not in wiki GeoJSON`);
+      continue;
+    }
+    const ring = roomFeature.geometry.coordinates[0];
+    const inside = glyphs.map((glyph) => {
+      const mid = [
+        (glyph.coordinates[0][0] + glyph.coordinates[1][0]) / 2,
+        (glyph.coordinates[0][1] + glyph.coordinates[1][1]) / 2,
+      ];
+      return {
+        wiki: segmentToWiki(mid),
+        inRoom: pointInRing(segmentToWiki(mid), ring),
+      };
+    });
+    const matches = inside.filter((g) => g.inRoom);
+    if (matches.length !== 1) {
+      unresolved.push(
+        `node ${node}: ${matches.length} of the "${shortcut}" glyphs are in ${room}, expected 1`,
+      );
+      continue;
+    }
+    entries.push({
+      name: room,
+      node,
+      position: matches[0].wiki.map(round2),
+      note: `${shortcut} City Shortcut glyph (teleport spot)`,
+    });
+  }
+
+  entries.sort((a, b) => a.node - b.node);
+  return { entries, unresolved };
+};
+
 const main = async () => {
   const response = await fetch(GADGET_URL);
   if (!response.ok) {
@@ -309,7 +425,12 @@ const main = async () => {
         `${geojson.rooms.length} rooms, ${geojson.entities.length} entities`,
     );
   }
-  const { entries, unresolved } = resolvePositions(geojson);
+  const markets = resolvePositions(geojson);
+  const shortcuts = resolveShortcutEndpoints(geojson);
+  const entries = [...markets.entries, ...shortcuts.entries].sort(
+    (a, b) => a.node - b.node,
+  );
+  const unresolved = [...markets.unresolved, ...shortcuts.unresolved];
 
   if (unresolved.length > 0) {
     console.error("Could not resolve positions for:");
@@ -329,7 +450,8 @@ const main = async () => {
 // Fetched: ${new Date().toISOString()}
 // Coordinates are wiki in-game [x, y], rounded to 2 decimals.
 // A position is the room centre (polygon centroid) unless the comment says
-// it is a shop marker (the shopkeeper NPC's marker inside the room).
+// it is a shop marker (the shopkeeper NPC's marker inside the room) or a
+// City Shortcut glyph (the teleport spot for a shortcut endpoint node).
 export const nodePositions = {
 ${lines.join("\n")}
 };

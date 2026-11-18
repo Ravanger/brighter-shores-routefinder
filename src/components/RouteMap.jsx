@@ -4,6 +4,7 @@ import {
   buildRouteSteps,
   formatStopNumbers,
 } from "../algorithm/routeMapData.js";
+import Legend from "./Legend.jsx";
 import { nodePositions } from "../algorithm/nodePositions.js";
 import {
   bountyBoard,
@@ -146,6 +147,9 @@ const RouteMap = ({
       attribution:
         'Tiles and positions: <a href="https://brightershoreswiki.org/w/Map">Brighter Shores Wiki</a>',
     }).addTo(map);
+    // The legend overlays the map's bottom-right corner, so keep the
+    // tile attribution out of it.
+    map.attributionControl.setPosition("bottomleft");
     // Stop-name labels: hidden at low zoom, shown when zoomed in (see
     // routeLabelZoomClass and the .route-stop-label rules in index.css).
     const updateLabels = () => {
@@ -309,16 +313,19 @@ const RouteMap = ({
 
   return (
     <div className="my-7">
-      <div
-        ref={containerRef}
-        className="h-[420px] w-full overflow-hidden rounded"
-        role="application"
-        aria-label="Route map"
-      />
-      <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">
-        Legend: green dot is the start, a numbered circle is a stop, a dashed
-        line is a teleport, a dotted purple line is an unlocked City Shortcut.
-      </p>
+      <div className="relative">
+        <div
+          ref={containerRef}
+          className="h-[420px] w-full overflow-hidden rounded"
+          role="application"
+          aria-label="Route map"
+        />
+        {/* Collapsible legend, pinned to the map's bottom-right corner: it
+            expands upward over the map when opened. */}
+        <div className="absolute bottom-2 right-2 z-[1000]">
+          <Legend />
+        </div>
+      </div>
     </div>
   );
 };

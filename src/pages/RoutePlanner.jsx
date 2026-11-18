@@ -7,6 +7,7 @@ import Paragraph from "../components/Paragraph.jsx";
 import InternalLink from "../components/InternalLink.jsx";
 import Bounty from "../components/Bounty.jsx";
 import RouteMap from "../components/RouteMap.jsx";
+import OverlayToggles from "../components/OverlayToggles.jsx";
 import { assignStopNumbers } from "../algorithm/routeMapData.js";
 import { getEnabledCrimeDens } from "../algorithm/nodes.js";
 
@@ -33,6 +34,9 @@ const formatTime = (input) => {
 const RoutePlanner = () => {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState({});
+
+  // Extra map layers (all shortcut spots / all den rooms), off by default.
+  const [overlays, setOverlays] = useState({ shortcuts: false, dens: false });
 
   const { selectedBounties: bounties } = useBounties("bountiesV2");
   const { selectedBounties: availableBounties } = useBounties(
@@ -234,14 +238,20 @@ const RoutePlanner = () => {
       ) : null}
 
       {result?.actions?.length ? (
-        <RouteMap
-          actions={result.actions}
-          detectiveMilestone={detectiveMilestone === "" ? 0 : detectiveMilestone}
-          battleOfFortuneholdCompleted={battleOfFortuneholdCompleted}
-          roundTrip={roundTrip}
-          expressBountyBoard={expressBountyBoard}
-          enabledCrimeDens={enabledCrimeDens}
-        />
+        <>
+          <div className="flex justify-end mb-2">
+            <OverlayToggles overlays={overlays} onChange={setOverlays} />
+          </div>
+          <RouteMap
+            actions={result.actions}
+            detectiveMilestone={detectiveMilestone === "" ? 0 : detectiveMilestone}
+            battleOfFortuneholdCompleted={battleOfFortuneholdCompleted}
+            roundTrip={roundTrip}
+            expressBountyBoard={expressBountyBoard}
+            enabledCrimeDens={enabledCrimeDens}
+            overlays={overlays}
+          />
+        </>
       ) : null}
 
       {result?.actions?.length ? (

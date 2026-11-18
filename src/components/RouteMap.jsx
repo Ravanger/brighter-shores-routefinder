@@ -8,6 +8,9 @@ import Legend from "./Legend.jsx";
 import { nodePositions } from "../algorithm/nodePositions.js";
 import {
   bountyBoard,
+  cityShortcuts,
+  crimeDens,
+  denRooms,
   expressBountyBoard as expressBoard,
 } from "../algorithm/nodes.js";
 import {
@@ -47,12 +50,17 @@ const startIcon = (L) =>
     iconAnchor: [8, 8],
   });
 
+// Den display names by key, for the debug overlay's tooltips.
+const denNameByKey = new Map(crimeDens.map((den) => [den.key, den.name]));
+
 /**
  * The planned route on the Brighter Shores wiki map: tiles from the wiki,
  * the route as a polyline, numbered stop markers. The full route is shown
- * statically — no playback, no animation. Leaflet is loaded dynamically
- * so the server render (and the render test) never touches the DOM: it
- * only renders the container and legend.
+ * statically — no playback, no animation. `overlays` (toggled by the
+ * OverlayToggles panel above the map) adds every City Shortcut teleport
+ * spot and every crime den room, whether or not the route uses them.
+ * Leaflet is loaded dynamically so the server render (and the render test)
+ * never touches the DOM: it only renders the container and legend.
  */
 const RouteMap = ({
   actions,
@@ -62,6 +70,7 @@ const RouteMap = ({
   expressBountyBoard = false,
   enabledCrimeDens = [],
   positions = nodePositions,
+  overlays = { shortcuts: false, dens: false },
 }) => {
   const board = expressBountyBoard ? expressBoard : bountyBoard;
   const geometry = useMemo(
@@ -90,6 +99,26 @@ const RouteMap = ({
       geometry ? buildRouteSteps(geometry, actions, roundTrip, positions) : null,
     [geometry, actions, roundTrip, positions],
   );
+
+  // All ten shortcut teleport spots at their node positions.
+  const shortcutSpots = useMemo(() => {
+    const spots = [];
+    for (const shortcut of cityShortcuts) {
+      for (const endpoint of shortcut.endpoints) {
+        const position = positions[endpoint.node];
+        if (!position) {
+          continue;
+        }
+        spots.push({
+          name: shortcut.name,
+          room: endpoint.room,
+          x: position[0],
+          y: position[1],
+        });
+      }
+    }
+    return spots;
+  }, [positions]);
 
   const [leaflet, setLeaflet] = useState(null);
   const containerRef = useRef(null);
@@ -280,6 +309,47 @@ const RouteMap = ({
       marker.addTo(layers);
     }
 
+    // Extra map layers (toggled above the map): every City Shortcut
+    // teleport spot and every crime den room, whether or not the route
+    // uses them. Smaller than the route's own dots; drawn before the
+    // markers so a numbered stop on the same spot covers it.
+    if (overlays.shortcuts) {
+      for (const spot of shortcutSpots) {
+        const marker = L.circleMarker(wikiToLatLng([spot.x, spot.y]), {
+          radius: 4,
+          color: "#ffffff",
+          weight: 2,
+          fillColor: "#7c3aed",
+          fillOpacity: 1,
+        });
+        marker.bindTooltip(
+          `<span class="route-jump-type">City Shortcut</span>${spot.room} — ${spot.name}`,
+          { className: "route-jump-tooltip route-jump-tooltip--shortcut" },
+        );
+        marker.addTo(layers);
+      }
+    }
+    if (overlays.dens) {
+      for (const room of denRooms) {
+        const position = positions[room.node];
+        if (!position) {
+          continue;
+        }
+        const marker = L.circleMarker(wikiToLatLng([position[0], position[1]]), {
+          radius: 4,
+          color: "#ffffff",
+          weight: 2,
+          fillColor: "#dc2626",
+          fillOpacity: 1,
+        });
+        marker.bindTooltip(
+          `<span class="route-jump-type">Crime Den</span>${denNameByKey.get(room.den)} — ${room.room}`,
+          { className: "route-jump-tooltip route-jump-tooltip--den" },
+        );
+        marker.addTo(layers);
+      }
+    }
+
     if (geometry.start) {
       const start = L.marker(wikiToLatLng([geometry.start.x, geometry.start.y]), {
         icon: startIcon(L),
@@ -305,7 +375,7 @@ const RouteMap = ({
       });
       marker.addTo(layers);
     }
-  }, [leaflet, route, geometry]);
+  }, [leaflet, route, geometry, overlays, shortcutSpots, positions]);
 
   if (!geometry || !route) {
     return null;

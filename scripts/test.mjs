@@ -17,6 +17,7 @@ if (!existsSync(esbuild)) {
 
 const jsxTests = [
   "src/components/Legend.test.mjs",
+  "src/components/OverlayToggles.test.mjs",
   "src/components/RouteMap.test.mjs",
 ];
 

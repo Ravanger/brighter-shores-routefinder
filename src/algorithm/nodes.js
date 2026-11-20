@@ -602,11 +602,11 @@ export const edges = [
   { nodes: [115, 117], weight: 5.42 },
 
   // City Shortcut teleport spots: each spot is its own node (120-125,
-  // 137-140) at its measured in-game position, hanging off the node with the
-  // shortest walk to it. The weight is that walk's tile-path time over the
-  // wiki room outlines (scripts/generateEdgePaths.mjs). Each spot must stay a
-  // dead end with one edge: a second edge lets ordinary walks pass through
-  // the spot, bending the map line to it.
+  // 137-140) at its measured in-game position. The weight is the walk's
+  // tile-path time over the wiki room outlines (scripts/generateEdgePaths.mjs).
+  // A spot gets a second walk edge only when the nearest node is a dead end
+  // (107 leads only to the Muggers den); cityShortcuts.test.mjs fails if any
+  // ordinary walk then passes through the spot.
   { nodes: [84, 120], weight: 4.57 }, // Cheese Shop -> Unicorn Farm spot
   { nodes: [71, 121], weight: 5.63 }, // Monocle Market -> Fillan's Living Room spot
   { nodes: [23, 122], weight: 5.76 }, // Dusty Alley door -> Dusty Nook spot
@@ -614,6 +614,7 @@ export const edges = [
   { nodes: [30, 124], weight: 6.03 }, // Waterfront Market door -> The Frog and Barnacle spot
   { nodes: [57, 125], weight: 1.53 }, // Bert's Gallery -> its own spot
   { nodes: [107, 137], weight: 2 }, // Snag Alley door -> its spot
+  { nodes: [111, 137], weight: 3.37 }, // Lord's Road East door -> Snag Alley spot
   { nodes: [36, 138], weight: 1.53 }, // Toy Stall -> Tanners Road spot
   { nodes: [78, 139], weight: 4.4 }, // Murkwell Lane door -> Sludge Street spot
   { nodes: [67, 140], weight: 1.76 }, // Peacock Road South door -> Slant Street spot

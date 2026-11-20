@@ -60,6 +60,27 @@ These numbers are chosen arbitrarily, I have just incremented them as I went alo
 when I need to add new nodes, the layers help me keep track of the nodes. If you are interested in the GIMP file, 
 let me know on [Discord](https://discord.gg/fcSYv9GPwJ) and I can provide it.
 
+## Route map geometry
+
+The route map draws walks along the streets (not straight across buildings) using two files
+generated from the Brighter Shores wiki's map data — do not edit them by hand:
+
+- `src/algorithm/nodePositions.js` — where each graph node sits, written by
+  `node scripts/generateNodePositions.mjs`. Most nodes are **doorway waypoints**: a doorway is
+  where two room outlines meet one unit apart, and the waypoint sits on it. Shops use their
+  shopkeeper's marker instead, and City Shortcut spots use positions measured in-game (Sludge
+  Street comes from brighteratlas tile data).
+- `src/algorithm/edgePaths.js` — for every walk edge, the street path between its two nodes,
+  written by `node scripts/generateEdgePaths.mjs`. It finds the shortest walkable tile path over
+  the wiki's room outlines and doorways; an empty value means the two nodes are in line of sight.
+
+Regenerate both after moving a node or adding an edge:
+
+```
+node scripts/generateNodePositions.mjs
+node scripts/generateEdgePaths.mjs [saved gadget .js]   # offline copy if the wiki can't be fetched
+```
+
 ## Running the project
 
 Ensure you have NodeJS installed on your machine. You can download it from [here](https://nodejs.org/en/).

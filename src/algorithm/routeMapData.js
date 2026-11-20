@@ -418,10 +418,10 @@ export const buildRouteGeometry = (
     if (!position) {
       continue;
     }
-    // A walk between two positioned nodes follows the street path between
-    // them; a directed edge's path is only stored in its own direction.
     if (pendingKind === null && i > 0 && positions[fullPath[i - 1]]) {
       const from = fullPath[i - 1];
+      // A directed edge stores its path in one direction only; fall back to
+      // the reverse lookup.
       const street =
         paths[`${from}-${node}`] ??
         [...(paths[`${node}-${from}`] ?? [])].reverse();

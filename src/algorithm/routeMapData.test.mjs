@@ -464,3 +464,114 @@ test("walk legs follow the street path stored for each edge", () => {
   const back = reversed.indexOf(from);
   assert.deepEqual(reversed.slice(back, back + 4), [from, "3,4", "1,2", to]);
 });
+
+// A directed edge (nodes.js marks it one-way) still draws its stored street
+// path, in the direction it is walked: Fortunehold Farm -> Butcher's Stall
+// crosses the one-way West Gate edges 15 -> 16.
+test("directed edges draw their street path in the walked direction", () => {
+  const actions = [
+    { type: "buy", item: "X", location: "Fortunehold Farm" },
+    { type: "sell", item: "X", location: "Butcher's Stall" },
+  ];
+  const points = buildRouteGeometry(
+    actions,
+    9,
+    true,
+    false,
+    undefined,
+    undefined,
+    [],
+    { "15-16": [[7, 8]] },
+  )
+    .segments.flatMap((segment) => segment.points)
+    .map(([x, y]) => `${x},${y}`);
+  const at = nodePositions[15].join(",");
+  const i = points.indexOf(at);
+  assert.ok(i !== -1, "route passes through node 15");
+  assert.deepEqual(points.slice(i, i + 3), [at, "7,8", nodePositions[16].join(",")]);
+});
+
+// A walk through a raided den bends through the room's own node and carries
+// the street path on each half of the passage: Victor T Cyclops -> Clock Stall
+// crosses the Muggers Four Winds Backroom (132) via 107 -> 132 -> 108.
+test("den passages draw street points on both sides of the room", () => {
+  const actions = [
+    { type: "buy", item: "X", location: "Victor T Cyclops" },
+    { type: "sell", item: "X", location: "Clock Stall" },
+  ];
+  const geometry = buildRouteGeometry(
+    actions,
+    9,
+    true,
+    false,
+    undefined,
+    undefined,
+    ["MUGGERS"],
+    { "107-132": [[1, 1]], "108-132": [[2, 2]] },
+  );
+  assert.deepEqual(geometry.dens, [
+    { name: "Muggers", room: "Four Winds Backroom", x: 355.01, y: 59.09 },
+  ]);
+  const points = geometry.segments
+    .flatMap((segment) => segment.points)
+    .map(([x, y]) => `${x},${y}`);
+  const room = nodePositions[132].join(",");
+  const i = points.indexOf(room);
+  assert.ok(i !== -1, "route bends through the den room");
+  assert.deepEqual(points.slice(i - 2, i + 3), [
+    nodePositions[107].join(","),
+    "1,1",
+    room,
+    "2,2",
+    nodePositions[108].join(","),
+  ]);
+});
+
+// A walk leg beside a node that has no position is drawn as a straight line:
+// the street path for the edge into it is dropped, so the segment spans the
+// gap from the previous positioned node to the next.
+test("walk legs skip street points beside an unpositioned node", () => {
+  const actions = [
+    { type: "buy", item: "X", location: "Fortunehold Farm" },
+    { type: "sell", item: "X", location: "Butcher's Stall" },
+  ];
+  const paths = { "1-9": [[7, 8]] };
+  const flat = (geometry) =>
+    geometry.segments.flatMap((segment) => segment.points).map(([x, y]) => `${x},${y}`);
+
+  const positioned = buildRouteGeometry(actions, 9, true, false, undefined, undefined, [], paths);
+  assert.ok(flat(positioned).includes("7,8"), "with node 9 positioned its street point is drawn");
+
+  const sparse = { ...nodePositions };
+  delete sparse[9]; // node 9 is on the route but has no position
+  const unpositioned = buildRouteGeometry(actions, 9, true, false, sparse, undefined, undefined, paths);
+  const points = flat(unpositioned);
+  assert.ok(!points.includes("7,8"), "no street point beside an unpositioned node");
+  // The leg runs straight from node 1 (before the gap) to node 14 (after it).
+  const from = nodePositions[1].join(",");
+  const to = nodePositions[14].join(",");
+  assert.ok(
+    points.some((p, i) => p === from && points[i + 1] === to),
+    "the leg runs straight across the gap",
+  );
+});
+
+// A City Shortcut teleport leg is drawn as a single dashed segment between its
+// two spots: even when a street path is stored for the crossing it is not
+// walked, so no intermediate points appear on the jump.
+test("shortcut legs get no street points", () => {
+  const actions = [
+    { type: "buy", item: "X", location: "Victor T Cyclops" },
+    { type: "sell", item: "X", location: "Clock Stall" },
+  ];
+  // Milestone 5 unlocks the Cellar shortcut; this route crosses it 120 -> 137.
+  const geometry = buildRouteGeometry(actions, 5, true, false, undefined, undefined, [], {
+    "120-137": [[99, 99]],
+  });
+  const points = geometry.segments
+    .flatMap((segment) => segment.points)
+    .map(([x, y]) => `${x},${y}`);
+  assert.ok(!points.includes("99,99"), "the crossing is not walked as a street");
+  const shortcut = geometry.segments.find((segment) => segment.kind === "shortcut");
+  assert.deepEqual(shortcut.points, [nodePositions[120], nodePositions[137]]);
+});

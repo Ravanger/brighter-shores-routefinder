@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import GPS from "./gps.js";
 import pathfinder from "./pathfinder.js";
 import { buildRouteGeometry } from "./routeMapData.js";
-import { cityShortcuts, edges } from "./nodes.js";
+import { cityShortcuts, crimeDens, edges } from "./nodes.js";
 import { nodePositions } from "./nodePositions.js";
 
 // Teleport times in seconds (game ticks / 600, brighteratlas.com).
@@ -223,4 +223,30 @@ test("a crossing route connects to and from the teleport spots", () => {
     );
   assert.ok(!touches(locked.segments, nodePositions[120]));
   assert.ok(!touches(locked.segments, nodePositions[137]));
+});
+
+test("no ordinary walk passes through a shortcut spot", () => {
+  const spots = new Set(
+    cityShortcuts.flatMap((shortcut) =>
+      shortcut.endpoints.map((endpoint) => endpoint.node),
+    ),
+  );
+  const nodes = [...new Set(edges.flatMap((edge) => edge.nodes))].filter(
+    (node) => !spots.has(node),
+  );
+  const gps = new GPS(9, true, crimeDens.map((den) => den.key));
+  for (const from of nodes) {
+    for (const to of nodes) {
+      if (from === to) {
+        continue;
+      }
+      const { path } = gps.distance(from, to);
+      for (let i = 1; i < path.length - 1; ++i) {
+        assert.ok(
+          !spots.has(path[i]) || spots.has(path[i - 1]) || spots.has(path[i + 1]),
+          `${from} -> ${to} walks through spot ${path[i]}: ${path.join(",")}`,
+        );
+      }
+    }
+  }
 });

@@ -26,3 +26,14 @@ test("City Shortcut teleports have no street path", () => {
     assert.equal(edgePaths[edge.nodes.join("-")], undefined);
   }
 });
+
+// The inverse of the first test: no stored path is left behind for an edge
+// that nodes.js no longer has (a stale key from a removed or renamed edge).
+test("edgePaths has no stale keys", () => {
+  const valid = new Set(
+    edges.filter((e) => !e.cityShortcut).map((e) => e.nodes.join("-")),
+  );
+  for (const key of Object.keys(edgePaths)) {
+    assert.ok(valid.has(key), `edgePaths has a stale path for ${key}`);
+  }
+});

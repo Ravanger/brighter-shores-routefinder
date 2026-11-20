@@ -119,15 +119,22 @@ const SHORTCUT_SPOTS = [
   { node: 125, shortcut: "Painting", room: "Bert's Gallery" },
 ];
 
-// The teleport spots measured in-game (2026-11-18). These override the
-// wiki's map glyphs for all ten City Shortcut endpoint nodes: the glyphs
-// sit a few units off the real teleport triggers, and routing walks to
-// these positions.
+// The teleport spots. Nine were measured in-game (2026-11-18); Sludge Street
+// (139) comes from brighteratlas tile data because its in-game reading was
+// 4u off. They override the wiki's map glyphs for all ten City Shortcut
+// endpoint nodes: the glyphs sit a few units off the real teleport triggers,
+// and routing walks to these positions.
 const MEASURED_SPOTS = [
   { node: 138, shortcut: "Sewer", room: "Tanners Road", position: [412, 97] },
   { node: 140, shortcut: "Manhole", room: "Slant Street", position: [403, 20] },
-  // The in-game reading [346, 3] was 4u off; brighteratlas.com tile data.
-  { node: 139, shortcut: "Sewer", room: "Sludge Street", position: [346.5, 7] },
+  {
+    // brighteratlas tile data (the in-game reading [346, 3] was 4u off).
+    node: 139,
+    shortcut: "Sewer",
+    room: "Sludge Street",
+    position: [346.5, 7],
+    note: "Sewer City Shortcut spot (brighteratlas tile data)",
+  },
   { node: 137, shortcut: "Cellar", room: "Snag Alley", position: [365, 58] },
   { node: 120, shortcut: "Cellar", room: "Unicorn Farm", position: [245, 37] },
   { node: 121, shortcut: "Painting", room: "Fillan's Living Room", position: [387, -29] },
@@ -228,7 +235,6 @@ const WAYPOINT_DOORS = [
   { node: 116, door: ["Gillad's House", "Peacock Road Central"], position: [389.5, 1.5] },
   { node: 117, door: ["Dawkin Lane", "Dawkin Court"], position: [371.5, 15] },
 ];
-
 
 // The marker segments are stored in the map image's own coordinate space
 // (axes swapped relative to in-game coords). This affine transform to wiki
@@ -677,7 +683,7 @@ const main = async () => {
       name: spot.room,
       node: spot.node,
       position: spot.position,
-      note: `${spot.shortcut} City Shortcut spot (measured in-game)`,
+      note: spot.note ?? `${spot.shortcut} City Shortcut spot (measured in-game)`,
     })),
     ...denRoomEntries.entries.map((entry) => ({
       name: entry.room,

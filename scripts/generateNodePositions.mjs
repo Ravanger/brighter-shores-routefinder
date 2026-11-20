@@ -99,17 +99,17 @@ const MAPPING = {
   },
 };
 
-// All ten City Shortcut endpoint nodes: the four street endpoints and six
-// spot nodes (120-125) of the `cityShortcut` edges in
+// All ten City Shortcut endpoint nodes: the spot nodes (120-125,
+// 137-140) of the `cityShortcut` edges in
 // src/algorithm/nodes.js; the rooms are the shortcut's two locations from
 // the wiki variant pages. Used to resolve each endpoint to its map glyph in
 // a room (a cross-check against MEASURED_SPOTS, which is what
 // nodePositions.js actually gets).
 const SHORTCUT_SPOTS = [
-  { node: 48, shortcut: "Sewer", room: "Tanners Road" },
-  { node: 67, shortcut: "Manhole", room: "Slant Street" },
-  { node: 80, shortcut: "Sewer", room: "Sludge Street" },
-  { node: 107, shortcut: "Cellar", room: "Snag Alley" },
+  { node: 138, shortcut: "Sewer", room: "Tanners Road" },
+  { node: 140, shortcut: "Manhole", room: "Slant Street" },
+  { node: 139, shortcut: "Sewer", room: "Sludge Street" },
+  { node: 137, shortcut: "Cellar", room: "Snag Alley" },
   { node: 120, shortcut: "Cellar", room: "Unicorn Farm" },
   { node: 121, shortcut: "Painting", room: "Fillan's Living Room" },
   { node: 122, shortcut: "Manhole", room: "Dusty Nook" },
@@ -123,10 +123,10 @@ const SHORTCUT_SPOTS = [
 // sit a few units off the real teleport triggers, and routing walks to
 // these positions.
 const MEASURED_SPOTS = [
-  { node: 48, shortcut: "Sewer", room: "Tanners Road", position: [412, 97] },
-  { node: 67, shortcut: "Manhole", room: "Slant Street", position: [403, 20] },
-  { node: 80, shortcut: "Sewer", room: "Sludge Street", position: [346, 3] },
-  { node: 107, shortcut: "Cellar", room: "Snag Alley", position: [365, 58] },
+  { node: 138, shortcut: "Sewer", room: "Tanners Road", position: [412, 97] },
+  { node: 140, shortcut: "Manhole", room: "Slant Street", position: [403, 20] },
+  { node: 139, shortcut: "Sewer", room: "Sludge Street", position: [346, 3] },
+  { node: 137, shortcut: "Cellar", room: "Snag Alley", position: [365, 58] },
   { node: 120, shortcut: "Cellar", room: "Unicorn Farm", position: [245, 37] },
   { node: 121, shortcut: "Painting", room: "Fillan's Living Room", position: [387, -29] },
   { node: 122, shortcut: "Manhole", room: "Dusty Nook", position: [326, 72] },

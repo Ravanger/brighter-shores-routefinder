@@ -76,7 +76,7 @@ test("pathfinder labels a shortcut crossing as its own travel step", () => {
 });
 
 // A route from Victor T Cyclops (8) to the Vase Stall (85): at milestone 5
-// the leg 120 -> 107 is the Cellar teleport, drawn as a shortcut segment
+// the leg 120 -> 137 is the Cellar teleport, drawn as a shortcut segment
 // between the two endpoints' positions; at milestone 4 it is not.
 test("shortcut legs are drawn as shortcut segments on the route map", () => {
   const actions = [
@@ -84,7 +84,7 @@ test("shortcut legs are drawn as shortcut segments on the route map", () => {
     { type: "sell", item: "X", location: "Vase Stall" },
   ];
   const from = nodePositions[120]; // Cellar spot in Unicorn Farm
-  const to = nodePositions[107]; // Cellar spot in Snag Alley
+  const to = nodePositions[137]; // Cellar spot in Snag Alley
 
   const hasShortcutSegment = (geometry) =>
     geometry.segments.some(
@@ -118,8 +118,8 @@ test("shortcut legs are drawn as shortcut segments on the route map", () => {
     {
       kind: "shortcut",
       name: "Cellar",
-      x: nodePositions[107][0],
-      y: nodePositions[107][1],
+      x: nodePositions[137][0],
+      y: nodePositions[137][1],
     },
   ]);
 });
@@ -157,12 +157,12 @@ test("a crossing route connects to and from the teleport spots", () => {
       name: null,
     },
     {
-      points: [nodePositions[120], nodePositions[107]],
+      points: [nodePositions[120], nodePositions[137]],
       kind: "shortcut",
       name: "Cellar",
     },
     {
-      points: [nodePositions[107], nodePositions[21]],
+      points: [nodePositions[137], nodePositions[21]],
       kind: "walk",
       name: null,
     },
@@ -180,8 +180,8 @@ test("a crossing route connects to and from the teleport spots", () => {
     {
       kind: "shortcut",
       name: "Cellar",
-      x: nodePositions[107][0],
-      y: nodePositions[107][1],
+      x: nodePositions[137][0],
+      y: nodePositions[137][1],
     },
   ]);
 
@@ -191,5 +191,5 @@ test("a crossing route connects to and from the teleport spots", () => {
       segment.points.some(([x, y]) => x === point[0] && y === point[1]),
     );
   assert.ok(!touches(locked.segments, nodePositions[120]));
-  assert.ok(!touches(locked.segments, nodePositions[107]));
+  assert.ok(!touches(locked.segments, nodePositions[137]));
 });

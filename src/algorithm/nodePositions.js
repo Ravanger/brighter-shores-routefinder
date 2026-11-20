@@ -18,19 +18,16 @@ export const nodePositions = {
   38: [396, 78], // Candice's Candles — marker "Candice" in Bobbin Road South
   41: [390, 42], // Hallig's Street Food — marker "Hallig" in Thadwick Square
   44: [388, 69], // Chef — marker "Anron the Chef" in Goose Inn Kitchen
-  48: [412, 97], // Tanners Road — Sewer City Shortcut spot (measured in-game)
   53: [443, 61], // Crenopolis Market — marker "Crenopolis Market Portal Stone" in Crenopolis Market
   54: [293, 61], // Crenopolis Outskirts — marker "Crenopolis Outskirts Portal Stone" in Crenopolis Outskirts
   57: [454, 48], // Bert's Gallery — room centre
   59: [429, 50], // Express Bounty Board — marker "Express Bounty Board" in South Player Market
   61: [409, 41], // Souvenir Stall — marker "Onjuan Nairal" in Outer Market
   66: [408, 14.5], // Bogg's Antiques — room centre
-  67: [403, 20], // Slant Street — Manhole City Shortcut spot (measured in-game)
   69: [391, 11], // Tommy Shoes Wines — marker "Tommy Shoes" in Peacock Road Central
   71: [396, -20], // Monocle Market — marker "Morley" in Peacock Road North
   76: [325, 7], // Francesca's Fruit Stall — marker "Francesca" in Meggrit's Market
   77: [322, 13], // Snilch's Watches — marker "Begram Snilch" in Meggrit's Market
-  80: [346, 3], // Sludge Street — Sewer City Shortcut spot (measured in-game)
   81: [360, 8], // Soap Shop — marker "Bubbles MacLeish" in Soap Shop
   83: [451, 38], // Henderson's Meat — marker "Henderson" in Henderson's Meat Storehouse
   84: [246, 49], // Cheese Shop — marker "Ralph Cyclops" in Unicorn Farm
@@ -39,7 +36,6 @@ export const nodePositions = {
   102: [431, 45], // Janessa's Delicacies — marker "Janessa Morage" in Merchants' Guild
   103: [436, 42], // Guild Bounty Board — marker "Guild Bounty Board" in Merchants' Guild
   104: [385, 92], // Textiles Stall — marker "Quinnis" in Waterfront Market
-  107: [365, 58], // Snag Alley — Cellar City Shortcut spot (measured in-game)
   118: [327, 63], // Cabbage Stall — marker "Ignatius" in Twiddle Corner
   119: [391, 29], // Pearl Stall — marker "Pearl" in Peacock Road South
   120: [245, 37], // Unicorn Farm — Cellar City Shortcut spot (measured in-game)
@@ -59,4 +55,8 @@ export const nodePositions = {
   134: [382, 1.19], // Gillad's House — crime den room centre
   135: [385.85, 12.32], // The Quill Club — crime den room centre
   136: [311.41, 11.67], // Abandoned Alleyway — quest room centre
+  137: [365, 58], // Snag Alley — Cellar City Shortcut spot (measured in-game)
+  138: [412, 97], // Tanners Road — Sewer City Shortcut spot (measured in-game)
+  139: [346, 3], // Sludge Street — Sewer City Shortcut spot (measured in-game)
+  140: [403, 20], // Slant Street — Manhole City Shortcut spot (measured in-game)
 };

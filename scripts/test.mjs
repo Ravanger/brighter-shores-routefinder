@@ -8,7 +8,14 @@ import { basename, join } from "node:path";
 // are bundled to plain JS with esbuild (already present via vite) first.
 // The bundles are CommonJS: react-dom/server requires Node builtins in a
 // way the ESM bundle shim cannot handle.
-const esbuild = "node_modules/.bin/esbuild";
+// On Windows, node_modules/.bin/esbuild is an extensionless shell shim that
+// execFileSync cannot start, so run the esbuild package's JS launcher at
+// bin/esbuild through node. esbuild's postinstall replaces that file with
+// the native binary in place on other platforms, where it must be executed
+// directly instead.
+const esbuild = "node_modules/esbuild/bin/esbuild";
+const esbuildCommand =
+  process.platform === "win32" ? [process.execPath, esbuild] : [esbuild];
 
 if (!existsSync(esbuild)) {
   console.error("esbuild not found — run npm install first.");
@@ -25,8 +32,9 @@ const tmp = mkdtempSync(join(tmpdir(), "routefinder-test-"));
 
 try {
   execFileSync(
-    esbuild,
+    esbuildCommand[0],
     [
+      ...esbuildCommand.slice(1),
       ...jsxTests,
       "--bundle",
       "--platform=node",

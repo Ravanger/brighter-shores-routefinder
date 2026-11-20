@@ -600,29 +600,35 @@ export const edges = [
   { nodes: [116, 135], weight: 3.05, crimeDen: "GANGSTERS" },
   { nodes: [115, 117], weight: 5.42 },
 
-  // City Shortcut teleport spots: each spot is its own node (120-125) at
-  // its measured in-game position, with a short walk edge from the nearest
-  // market. Those six walk times are estimates at ~2.6 map units per
-  // second (the median speed of the measured edges) — re-measure in-game
-  // if a route looks off. The four street endpoints (107, 80, 48, 67) are
-  // already their own nodes, also at their measured spots.
+  // City Shortcut teleport spots: each spot is its own node (120-125,
+  // 137-140) at its measured in-game position. 120-125 hang off their
+  // nearest market by a short walk edge; those six walk times are estimates
+  // at ~2.6 map units per second (the median speed of the measured edges) —
+  // re-measure in-game if a route looks off. 137-140 hang off the nearest
+  // street waypoint, timed the same way from the wiki room outlines. Each
+  // spot must stay a dead end with one edge: a second edge lets ordinary
+  // walks pass through the spot, bending the map line to it.
   { nodes: [84, 120], weight: 4.6 }, // Cheese Shop -> Unicorn Farm spot
   { nodes: [57, 125], weight: 1.4 }, // Bert's Gallery -> its own spot
   { nodes: [71, 121], weight: 4.8 }, // Monocle Market -> Fillan's Living Room spot
   { nodes: [118, 122], weight: 3.4 }, // Cabbage Stall -> Dusty Nook spot
   { nodes: [83, 123], weight: 7.1 }, // Henderson's Meat -> Council Office spot
   { nodes: [26, 124], weight: 5.5 }, // Clock Stall -> The Frog and Barnacle spot
+  { nodes: [107, 137], weight: 2.5 }, // Snag Alley door -> its spot
+  { nodes: [36, 138], weight: 1.7 }, // Toy Stall -> Tanners Road spot
+  { nodes: [78, 139], weight: 5.1 }, // Murkwell Lane door -> Sludge Street spot
+  { nodes: [101, 140], weight: 1.6 }, // Bogg's Antiques door -> Slant Street spot
 
   // City Shortcuts are teleports between two rooms (see `cityShortcuts`),
   // unlocked at a Detective milestone; the walk to and from each spot is
   // the edges above, the weight is the teleport itself.
   {
-    nodes: [120, 107],
+    nodes: [120, 137],
     weight: 2,
     detectiveMilestone: 5,
     cityShortcut: "Cellar",
   },
-  { nodes: [48, 80], weight: 2, detectiveMilestone: 6, cityShortcut: "Sewer" },
+  { nodes: [138, 139], weight: 2, detectiveMilestone: 6, cityShortcut: "Sewer" },
   {
     nodes: [125, 121],
     weight: 2,
@@ -630,7 +636,7 @@ export const edges = [
     cityShortcut: "Painting",
   },
   {
-    nodes: [67, 122],
+    nodes: [140, 122],
     weight: 2,
     detectiveMilestone: 8,
     cityShortcut: "Manhole",
@@ -654,15 +660,15 @@ export const edges = [
  * variant pages list each shortcut's two locations).
  *
  * Every endpoint is its own graph node at its measured in-game position
- * (nodePositions.js, measured 2026-11-18): the four street endpoints
- * (107, 80, 48, 67) and six spot nodes (120-125), each of the latter
- * connected to its nearest market by a short walk edge in `edges`. The
+ * (nodePositions.js, measured 2026-11-18): ten spot nodes (120-125,
+ * 137-140), each connected by walk edges in `edges` to its nearest market
+ * (120-125) or nearest street waypoint (137-140). The
  * wiki's map glyphs sit a few units off the real teleport triggers, so
  * the measurements override them.
- *   Cellar     120 (Unicorn Farm) <-> 107 (Snag Alley)
- *   Sewer      48 (Tanners Road) <-> 80 (Sludge Street)
+ *   Cellar     120 (Unicorn Farm) <-> 137 (Snag Alley)
+ *   Sewer      138 (Tanners Road) <-> 139 (Sludge Street)
  *   Painting   125 (Bert's Gallery) <-> 121 (Fillan's Living Room)
- *   Manhole    67 (Slant Street) <-> 122 (Dusty Nook)
+ *   Manhole    140 (Slant Street) <-> 122 (Dusty Nook)
  *   Trapdoor   124 (The Frog and Barnacle) <-> 123 (Council Office)
  */
 export const cityShortcuts = [
@@ -671,15 +677,15 @@ export const cityShortcuts = [
     milestone: 5,
     endpoints: [
       { node: 120, room: "Unicorn Farm" },
-      { node: 107, room: "Snag Alley" },
+      { node: 137, room: "Snag Alley" },
     ],
   },
   {
     name: "Sewer",
     milestone: 6,
     endpoints: [
-      { node: 48, room: "Tanners Road" },
-      { node: 80, room: "Sludge Street" },
+      { node: 138, room: "Tanners Road" },
+      { node: 139, room: "Sludge Street" },
     ],
   },
   {
@@ -694,7 +700,7 @@ export const cityShortcuts = [
     name: "Manhole",
     milestone: 8,
     endpoints: [
-      { node: 67, room: "Slant Street" },
+      { node: 140, room: "Slant Street" },
       { node: 122, room: "Dusty Nook" },
     ],
   },

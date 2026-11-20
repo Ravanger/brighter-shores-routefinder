@@ -51,7 +51,7 @@ test("pins a sample of wiki positions", () => {
 // a few so a regeneration cannot silently clobber the measurements.
 test("pins the measured City Shortcut spots", () => {
   assert.deepEqual(nodePositions[120], [245, 37]); // Unicorn Farm (Cellar)
-  assert.deepEqual(nodePositions[107], [365, 58]); // Snag Alley (Cellar)
+  assert.deepEqual(nodePositions[137], [365, 58]); // Snag Alley (Cellar)
   assert.deepEqual(nodePositions[123], [440, 23]); // Council Office (Trapdoor)
 });
 

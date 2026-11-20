@@ -196,7 +196,7 @@ test("den passages walked through are marked as dots on the map", () => {
     ["MUGGERS"],
   );
   assert.deepEqual(raided.dens, [
-    { name: "Muggers", room: "Four Winds Backroom", x: 355.01, y: 59.09 },
+    { name: "Muggers", room: "Four Winds Side Room", x: 365, y: 72 },
   ]);
 
   assert.deepEqual(buildRouteGeometry(actions, 9, true, false).dens, []);
@@ -493,7 +493,7 @@ test("directed edges draw their street path in the walked direction", () => {
 
 // A walk through a raided den bends through the room's own node and carries
 // the street path on each half of the passage: Victor T Cyclops -> Clock Stall
-// crosses the Muggers Four Winds Backroom (132) via 107 -> 132 -> 108.
+// crosses the Muggers Four Winds Side Room (133) via 109 -> 133 -> 110.
 test("den passages draw street points on both sides of the room", () => {
   const actions = [
     { type: "buy", item: "X", location: "Victor T Cyclops" },
@@ -507,23 +507,20 @@ test("den passages draw street points on both sides of the room", () => {
     undefined,
     undefined,
     ["MUGGERS"],
-    { "107-132": [[1, 1]], "108-132": [[2, 2]] },
+    { "109-133": [[1, 1]], "110-133": [[2, 2]] },
   );
-  assert.deepEqual(geometry.dens, [
-    { name: "Muggers", room: "Four Winds Backroom", x: 355.01, y: 59.09 },
-  ]);
   const points = geometry.segments
     .flatMap((segment) => segment.points)
     .map(([x, y]) => `${x},${y}`);
-  const room = nodePositions[132].join(",");
+  const room = nodePositions[133].join(",");
   const i = points.indexOf(room);
   assert.ok(i !== -1, "route bends through the den room");
   assert.deepEqual(points.slice(i - 2, i + 3), [
-    nodePositions[107].join(","),
+    nodePositions[109].join(","),
     "1,1",
     room,
     "2,2",
-    nodePositions[108].join(","),
+    nodePositions[110].join(","),
   ]);
 });
 

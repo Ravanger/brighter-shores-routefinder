@@ -6,7 +6,7 @@ import { buildRouteGeometry } from "./routeMapData.js";
 import { cityShortcuts, crimeDens, edges } from "./nodes.js";
 import { nodePositions } from "./nodePositions.js";
 
-// Teleport times in seconds (game ticks / 600, brighteratlas.com).
+// Teleport times in seconds (game ticks / 600).
 const TELEPORT_SECONDS = {
   Cellar: 6.17,
   Sewer: 3.67,

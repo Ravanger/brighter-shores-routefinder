@@ -11,6 +11,7 @@ import { edges, portals } from "./nodes.js";
 class GPS {
   #adjacencyMap;
   #cache;
+  #spots;
 
   constructor(
     detectiveMilestone,
@@ -19,6 +20,9 @@ class GPS {
   ) {
     this.#adjacencyMap = new Map();
     this.#cache = new Map();
+    this.#spots = new Set(
+      edges.filter((edge) => edge.cityShortcut).flatMap((edge) => edge.nodes),
+    );
     this.#buildAdjacencyMap(
       detectiveMilestone,
       battleOfFortuneholdCompleted,
@@ -48,49 +52,55 @@ class GPS {
       return { distance: 0, path: [node1] };
     }
 
-    const pq = new PriorityQueue((a, b) => a.distance - b.distance);
-    pq.enqueue({ distance: 0, node: node1 });
+    // A City Shortcut spot reached on foot can only be left by teleporting:
+    // walking on from it would be a detour through the spot, so the search
+    // state is the node plus whether it was walked into.
+    const stateKey = (node, walkedIn) => (walkedIn ? `${node}w` : `${node}`);
 
-    const distances = new Map();
+    const pq = new PriorityQueue((a, b) => a.distance - b.distance);
+    pq.enqueue({ distance: 0, node: node1, walkedIn: false });
+
+    const distances = new Map([[stateKey(node1, false), 0]]);
     const previous = new Map();
 
-    for (let node of this.#adjacencyMap.keys()) {
-      distances.set(node, Number.MAX_SAFE_INTEGER);
-      previous.set(node, null);
-    }
-
-    distances.set(node1, 0);
-
     while (pq.size() > 0) {
-      const { node, distance } = pq.dequeue();
+      const { node, distance, walkedIn } = pq.dequeue();
+      const key = stateKey(node, walkedIn);
 
       if (node === node2) {
-        const path = this.#reconstructPath(previous, node1, node2);
+        const path = this.#reconstructPath(previous, node1, key);
         return {
           distance,
           path,
         };
       }
 
-      if (distance > distances.get(node)) {
+      if (distance > distances.get(key)) {
         continue;
       }
 
       const neighbors = this.#adjacencyMap.get(node);
-      for (let [neighbor, weight] of neighbors) {
-        const newDistance = distance + weight;
-
-        // Only consider this path if it improves the known shortest distance
-        if (newDistance >= distances.get(neighbor)) {
+      for (let [neighbor, weight, walk] of neighbors) {
+        if (walkedIn && walk) {
           continue;
         }
 
-        distances.set(neighbor, newDistance);
-        previous.set(neighbor, node);
+        const newDistance = distance + weight;
+        const neighborWalkedIn = walk && this.#spots.has(neighbor);
+        const neighborKey = stateKey(neighbor, neighborWalkedIn);
+
+        // Only consider this path if it improves the known shortest distance
+        if (newDistance >= (distances.get(neighborKey) ?? Infinity)) {
+          continue;
+        }
+
+        distances.set(neighborKey, newDistance);
+        previous.set(neighborKey, { key, node });
 
         pq.enqueue({
           node: neighbor,
-          distance: distance + weight,
+          distance: newDistance,
+          walkedIn: neighborWalkedIn,
         });
       }
     }
@@ -98,18 +108,20 @@ class GPS {
     throw new Error(`No path found between ${node1} and ${node2}`);
   }
 
-  #reconstructPath(previous, start, target) {
-    const path = [];
-    let current = target;
-    while (current !== null) {
-      path.push(current);
-      current = previous.get(current);
+  #reconstructPath(previous, start, targetKey) {
+    const path = [Number.parseInt(targetKey)];
+    for (
+      let step = previous.get(targetKey);
+      step;
+      step = previous.get(step.key)
+    ) {
+      path.push(step.node);
     }
     path.reverse();
     return path[0] === start ? path : [];
   }
 
-  #addEdge(node1, node2, weight) {
+  #addEdge(node1, node2, weight, walk) {
     if (!this.#adjacencyMap.has(node1)) {
       this.#adjacencyMap.set(node1, []);
     }
@@ -126,7 +138,7 @@ class GPS {
       }
     }
 
-    neighbors.push([node2, weight]);
+    neighbors.push([node2, weight, walk]);
   }
 
   #buildAdjacencyMap(
@@ -159,17 +171,18 @@ class GPS {
         ? edge.weight + edge.chanceOfEncounter * edge.timeToResolve
         : edge.weight;
 
-      this.#addEdge(node1, node2, weight);
+      const walk = !edge.cityShortcut;
+      this.#addEdge(node1, node2, weight, walk);
 
       if (!edge.directed) {
-        this.#addEdge(node2, node1, weight);
+        this.#addEdge(node2, node1, weight, walk);
       }
     }
 
     // Portal zones can be travelled to from any other node
     for (let node of this.#adjacencyMap.keys()) {
       Object.entries(portals).forEach(([, portal]) => {
-        this.#addEdge(node, portal.node, portal.teleportTime);
+        this.#addEdge(node, portal.node, portal.teleportTime, false);
       });
     }
   }

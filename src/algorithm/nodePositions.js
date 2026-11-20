@@ -144,6 +144,6 @@ export const nodePositions = {
   136: [311.41, 11.67], // Abandoned Alleyway — quest room centre
   137: [365, 58], // Snag Alley — Cellar City Shortcut spot (measured in-game)
   138: [412, 97], // Tanners Road — Sewer City Shortcut spot (measured in-game)
-  139: [346.5, 7], // Sludge Street — Sewer City Shortcut spot (brighteratlas tile data)
+  139: [346.5, 7], // Sludge Street — Sewer City Shortcut spot (tile data)
   140: [403, 20], // Slant Street — Manhole City Shortcut spot (measured in-game)
 };

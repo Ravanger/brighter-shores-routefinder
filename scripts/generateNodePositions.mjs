@@ -2,7 +2,7 @@
 // src/algorithm/nodePositions.js: a node number -> [x, y] map in wiki
 // in-game coords for every market, both bounty boards, the two portal
 // stones and all ten City Shortcut endpoint nodes. The spot positions come
-// from MEASURED_SPOTS below (measured in-game; the wiki's map glyphs sit a
+// from TELEPORT_SPOTS below (measured in-game; the wiki's map glyphs sit a
 // few units off the real teleport triggers), not from the wiki data. Also
 // The ten crime den rooms are graph nodes too (see `denRooms` in
 // src/algorithm/nodes.js): their positions are the wiki polygon centroids,
@@ -104,7 +104,7 @@ const MAPPING = {
 // 137-140) of the `cityShortcut` edges in
 // src/algorithm/nodes.js; the rooms are the shortcut's two locations from
 // the wiki variant pages. Used to resolve each endpoint to its map glyph in
-// a room (a cross-check against MEASURED_SPOTS, which is what
+// a room (a cross-check against TELEPORT_SPOTS, which is what
 // nodePositions.js actually gets).
 const SHORTCUT_SPOTS = [
   { node: 138, shortcut: "Sewer", room: "Tanners Road" },
@@ -119,21 +119,20 @@ const SHORTCUT_SPOTS = [
   { node: 125, shortcut: "Painting", room: "Bert's Gallery" },
 ];
 
-// The teleport spots. Nine were measured in-game (2026-11-18); Sludge Street
-// (139) comes from brighteratlas tile data because its in-game reading was
-// 4u off. They override the wiki's map glyphs for all ten City Shortcut
-// endpoint nodes: the glyphs sit a few units off the real teleport triggers,
-// and routing walks to these positions.
-const MEASURED_SPOTS = [
+// The teleport spots, measured in-game (2026-11-18) except where noted.
+// They override the wiki's map glyphs for all ten City Shortcut endpoint
+// nodes: the glyphs sit a few units off the real teleport triggers, and
+// routing walks to these positions.
+const TELEPORT_SPOTS = [
   { node: 138, shortcut: "Sewer", room: "Tanners Road", position: [412, 97] },
   { node: 140, shortcut: "Manhole", room: "Slant Street", position: [403, 20] },
   {
-    // brighteratlas tile data (the in-game reading [346, 3] was 4u off).
+    // Tile data (the in-game reading [346, 3] was 4u off).
     node: 139,
     shortcut: "Sewer",
     room: "Sludge Street",
     position: [346.5, 7],
-    note: "Sewer City Shortcut spot (brighteratlas tile data)",
+    note: "Sewer City Shortcut spot (tile data)",
   },
   { node: 137, shortcut: "Cellar", room: "Snag Alley", position: [365, 58] },
   { node: 120, shortcut: "Cellar", room: "Unicorn Farm", position: [245, 37] },
@@ -669,8 +668,8 @@ const main = async () => {
   const questNodeByRoom = new Map(
     questRooms.map((room) => [`${room.quest}:${room.room}`, room.node]),
   );
-  // The teleport spots are measured in-game (MEASURED_SPOTS), not taken
-  // from the wiki's map glyphs.
+  // The teleport spots come from TELEPORT_SPOTS, not from the wiki's map
+  // glyphs.
   const entries = [
     ...marketEntries.entries,
     ...WAYPOINT_DOORS.map((waypoint) => ({
@@ -679,7 +678,7 @@ const main = async () => {
       position: waypoint.position,
       note: "doorway (wiki room outlines)",
     })),
-    ...MEASURED_SPOTS.map((spot) => ({
+    ...TELEPORT_SPOTS.map((spot) => ({
       name: spot.room,
       node: spot.node,
       position: spot.position,

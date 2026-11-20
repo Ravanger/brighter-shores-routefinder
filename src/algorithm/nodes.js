@@ -22,7 +22,7 @@ export const expressBountyBoard = {
 
 /**
  * Portals that players can teleport to. The teleport is 3100 game ticks at
- * 600 ticks/s (brighteratlas.com merchant data).
+ * 600 ticks/s.
  * All node numbers can be referenced in the brighter shores world map file mentioned in the code repositories README.
  */
 export const portals = {
@@ -602,11 +602,10 @@ export const edges = [
   { nodes: [115, 117], weight: 5.42 },
 
   // City Shortcut teleport spots: each spot is its own node (120-125,
-  // 137-140) at its measured in-game position. The weight is the walk's
+  // 137-140) at its measured in-game position, with a walk edge to each
+  // nearby node it reaches faster directly. The weight is the walk's
   // tile-path time over the wiki room outlines (scripts/generateEdgePaths.mjs).
-  // A spot gets a second walk edge only when the nearest node is a dead end
-  // (107 leads only to the Muggers den); cityShortcuts.test.mjs fails if any
-  // ordinary walk then passes through the spot.
+  // GPS never walks through a spot, so extra edges cannot bend other walks.
   { nodes: [84, 120], weight: 4.57 }, // Cheese Shop -> Unicorn Farm spot
   { nodes: [71, 121], weight: 5.63 }, // Monocle Market -> Fillan's Living Room spot
   { nodes: [23, 122], weight: 5.76 }, // Dusty Alley door -> Dusty Nook spot
@@ -618,6 +617,18 @@ export const edges = [
   { nodes: [36, 138], weight: 1.53 }, // Toy Stall -> Tanners Road spot
   { nodes: [78, 139], weight: 4.4 }, // Murkwell Lane door -> Sludge Street spot
   { nodes: [67, 140], weight: 1.76 }, // Peacock Road South door -> Slant Street spot
+  { nodes: [109, 137], weight: 4.17 }, // Four Winds Side Room door -> Snag Alley spot
+  { nodes: [35, 138], weight: 3.13 }, // Waterfront door -> Tanners Road spot
+  { nodes: [79, 139], weight: 7.13 }, // Dawkin Lane door -> Sludge Street spot
+  { nodes: [63, 140], weight: 4.09 }, // Slant Street Cart House door -> Slant Street spot
+  { nodes: [65, 140], weight: 5.63 }, // Dilapidated Warehouse door -> Slant Street spot
+  { nodes: [101, 140], weight: 2.8 }, // Bogg's Antiques door -> Slant Street spot
+  { nodes: [22, 122], weight: 6.5 }, // Twiddle Corner door -> Dusty Nook spot
+  { nodes: [31, 124], weight: 7.46 }, // Jennaler's Wines -> The Frog and Barnacle spot
+  { nodes: [82, 123], weight: 6.42 }, // Henderson's Meat Storehouse door -> Council Office spot
+    { nodes: [55, 123], weight: 13.7 }, // Crenopolis Market Portal Stone door -> Council Office spot
+    { nodes: [56, 123], weight: 12.26 }, // South Player Market door -> Council Office spot
+    { nodes: [58, 123], weight: 11.39 }, // Bert's Gallery door -> Council Office spot
 
   // City Shortcuts are teleports between two rooms (see `cityShortcuts`),
   // unlocked at a Detective milestone; the walk to and from each spot is
@@ -659,16 +670,14 @@ export const edges = [
  * profession interlink rewards: teleports between two rooms in Crenopolis,
  * one unlocked per Detective milestone from 5 onwards. Each is wired as an
  * edge in `edges` carrying its name and `detectiveMilestone`; the weight is
- * the teleport itself (game ticks / 600 from brighteratlas.com merchant
- * data: 3.67s to 8.17s) — the walk to and from each spot is the
- * surrounding edges.
+ * the teleport itself (game ticks / 600: 3.67s to 8.17s) — the walk to and
+ * from each spot is the surrounding edges.
  * Source: https://brightershoreswiki.org/w/City_Shortcut (the individual
  * variant pages list each shortcut's two locations).
  *
  * Every endpoint is its own graph node at its measured in-game position
  * (nodePositions.js, measured 2026-11-18): ten spot nodes (120-125,
- * 137-140), each connected by one walk edge in `edges` to the node with
- * the shortest walk to it. The
+ * 137-140), each with walk edges in `edges` to the nodes around it. The
  * wiki's map glyphs sit a few units off the real teleport triggers, so
  * the measurements override them.
  *   Cellar     120 (Unicorn Farm) <-> 137 (Snag Alley)

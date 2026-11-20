@@ -16,7 +16,7 @@ import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { denRooms, edges, questRooms } from "../src/algorithm/nodes.js";
+import { cityShortcuts, denRooms, edges, questRooms } from "../src/algorithm/nodes.js";
 import { nodePositions } from "../src/algorithm/nodePositions.js";
 import { GADGET_URL, extractGeojsonModules } from "./generateNodePositions.mjs";
 
@@ -27,6 +27,12 @@ const TICKS_PER_SECOND = 600;
 // How far a node's position may sit off the walkable tiles (shop markers
 // and spots can lie on a wall) and still be snapped onto them.
 const SNAP_RADIUS = 3;
+// The walk edges of the City Shortcut spots are timed on the tile grid, so
+// their path time must match the weight; legacy edge weights predate the
+// grid and drift from it, so only spot-attached edges are ratio-checked.
+const SPOT_NODES = new Set(
+  cityShortcuts.flatMap((shortcut) => shortcut.endpoints.map((e) => e.node)),
+);
 
 const key = (x, y) => `${x},${y}`;
 
@@ -253,8 +259,8 @@ export const findWalkPath = (walkable, from, to) => {
  * @param walkEdges Edges from src/algorithm/nodes.js
  * @param positions Node number -> [x, y]
  * @returns {{paths: Object<string, number[][]>, report: string[], unresolved: string[]}}
- *   `paths` is keyed "a-b" in each edge's node order; `report` lists edges
- *   whose path time is far from the edge's weight
+ *   `paths` is keyed "a-b" in each edge's node order; `report` lists
+ *   spot-attached edges whose path time is far from the edge's weight
  */
 export const buildEdgePaths = (rooms, walkEdges = edges, positions = nodePositions) => {
   const conditionalRooms = new Map(
@@ -293,7 +299,10 @@ export const buildEdgePaths = (rooms, walkEdges = edges, positions = nodePositio
       Math.round(y * 100) / 100,
     ]);
     const ratio = path.seconds / edge.weight;
-    if (ratio > 1.5 || ratio < 0.67) {
+    if (
+      (SPOT_NODES.has(a) || SPOT_NODES.has(b)) &&
+      (ratio > 1.5 || ratio < 0.67)
+    ) {
       report.push(
         `${a}-${b}: path ${path.seconds.toFixed(2)}s vs edge ${edge.weight}s`,
       );

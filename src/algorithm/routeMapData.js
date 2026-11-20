@@ -420,8 +420,7 @@ export const buildRouteGeometry = (
     }
     if (pendingKind === null && i > 0 && positions[fullPath[i - 1]]) {
       const from = fullPath[i - 1];
-      // A directed edge stores its path in one direction only; fall back to
-      // the reverse lookup.
+      // A directed edge stores its path in one direction only.
       const street =
         paths[`${from}-${node}`] ??
         [...(paths[`${node}-${from}`] ?? [])].reverse();

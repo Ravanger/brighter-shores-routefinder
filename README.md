@@ -69,7 +69,7 @@ generated from the Brighter Shores wiki's map data — do not edit them by hand:
   `node scripts/generateNodePositions.mjs`. Most nodes are **doorway waypoints**: a doorway is
   where two room outlines meet one unit apart, and the waypoint sits on it. Shops use their
   shopkeeper's marker instead, and City Shortcut spots use positions measured in-game (Sludge
-  Street comes from brighteratlas tile data).
+  Street comes from tile data).
 - `src/algorithm/edgePaths.js` — for every walk edge, the street path between its two nodes,
   written by `node scripts/generateEdgePaths.mjs`. It finds the shortest walkable tile path over
   the wiki's room outlines and doorways; an empty value means the two nodes are in line of sight.

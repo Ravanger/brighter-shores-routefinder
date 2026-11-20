@@ -21,19 +21,20 @@ export const expressBountyBoard = {
 };
 
 /**
- * Portals that players can teleport to.
+ * Portals that players can teleport to. The teleport is 3100 game ticks at
+ * 600 ticks/s.
  * All node numbers can be referenced in the brighter shores world map file mentioned in the code repositories README.
  */
 export const portals = {
   CRENOPOLIS_MARKET: {
     name: "Crenopolis Market",
     node: 53,
-    teleportTime: 8,
+    teleportTime: 5.17,
   },
   CRENOPOLIS_OUTSKIRTS: {
     name: "Crenopolis Outskirts",
     node: 54,
-    teleportTime: 8,
+    teleportTime: 5.17,
   },
 };
 
@@ -144,11 +145,11 @@ export const markets = {
   },
   CABBAGE_STALL: {
     name: "Cabbage Stall",
-    node: 118
+    node: 118,
   },
   PEARL_STALL: {
     name: "Pearl Stall",
-    node: 119
+    node: 119,
   },
 };
 
@@ -429,7 +430,7 @@ export const edges = [
 
   { nodes: [61, 95], weight: 4.6 },
 
-  // Counterfeiters passage via the Dilapidated Warehouse (measured 6.62s total).
+  // Counterfeiters passage via the Slant Street Cart House (measured 6.62s total).
   { nodes: [62, 128], weight: 3.31, crimeDen: "COUNTERFEITERS" },
   { nodes: [63, 128], weight: 3.31, crimeDen: "COUNTERFEITERS" },
 
@@ -437,7 +438,7 @@ export const edges = [
   { nodes: [63, 67], weight: 5.06 },
   { nodes: [63, 101], weight: 6.77 },
 
-  // Counterfeiters passage via the Slant Street Cart House (measured 7s total).
+  // Counterfeiters passage via the Dilapidated Warehouse (measured 7s total).
   { nodes: [64, 129], weight: 3.5, crimeDen: "COUNTERFEITERS" },
   { nodes: [65, 129], weight: 3.5, crimeDen: "COUNTERFEITERS" },
   { nodes: [64, 97], weight: 2.7 },
@@ -587,7 +588,7 @@ export const edges = [
 
   { nodes: [110, 112], weight: 2.79 },
 
-  // Gangsters passage via Gillad's House (measured 2.97s total).
+  // Gangsters passage via The Quill Club (measured 2.97s total).
   { nodes: [113, 134], weight: 1.485, crimeDen: "GANGSTERS" },
   { nodes: [114, 134], weight: 1.485, crimeDen: "GANGSTERS" },
   // { nodes: [113, 116] }, Not needed
@@ -595,49 +596,70 @@ export const edges = [
   // { nodes: [114, 115] }, Not needed
   { nodes: [114, 117], weight: 6.49 },
 
-  // Gangsters passage via The Quill Club (measured 6.1s total).
+  // Gangsters passage via Gillad's House (measured 6.1s total).
   { nodes: [115, 135], weight: 3.05, crimeDen: "GANGSTERS" },
   { nodes: [116, 135], weight: 3.05, crimeDen: "GANGSTERS" },
   { nodes: [115, 117], weight: 5.42 },
 
-  // City Shortcut teleport spots: each spot is its own node (120-125) at
-  // its measured in-game position, with a short walk edge from the nearest
-  // market. Those six walk times are estimates at ~2.6 map units per
-  // second (the median speed of the measured edges) — re-measure in-game
-  // if a route looks off. The four street endpoints (107, 80, 48, 67) are
-  // already their own nodes, also at their measured spots.
-  { nodes: [84, 120], weight: 4.6 }, // Cheese Shop -> Unicorn Farm spot
-  { nodes: [57, 125], weight: 1.4 }, // Bert's Gallery -> its own spot
-  { nodes: [71, 121], weight: 4.8 }, // Monocle Market -> Fillan's Living Room spot
-  { nodes: [118, 122], weight: 3.4 }, // Cabbage Stall -> Dusty Nook spot
-  { nodes: [83, 123], weight: 7.1 }, // Henderson's Meat -> Council Office spot
-  { nodes: [26, 124], weight: 5.5 }, // Clock Stall -> The Frog and Barnacle spot
+  // City Shortcut teleport spots: each spot is its own node (120-125,
+  // 137-140) at its measured in-game position, with a walk edge to each
+  // nearby node it reaches faster directly. The weight is the walk's
+  // tile-path time over the wiki room outlines (scripts/generateEdgePaths.mjs).
+  // GPS never walks through a spot, so extra edges cannot bend other walks.
+  { nodes: [84, 120], weight: 4.57 }, // Cheese Shop -> Unicorn Farm spot
+  { nodes: [71, 121], weight: 5.63 }, // Monocle Market -> Fillan's Living Room spot
+  { nodes: [23, 122], weight: 5.76 }, // Dusty Alley door -> Dusty Nook spot
+  { nodes: [96, 123], weight: 5.53 }, // North/East Player Market door -> Council Office spot
+  { nodes: [30, 124], weight: 6.03 }, // Waterfront Market door -> The Frog and Barnacle spot
+  { nodes: [57, 125], weight: 1.53 }, // Bert's Gallery -> its own spot
+  { nodes: [107, 137], weight: 2 }, // Snag Alley door -> its spot
+  { nodes: [111, 137], weight: 3.37 }, // Lord's Road East door -> Snag Alley spot
+  { nodes: [36, 138], weight: 1.53 }, // Toy Stall -> Tanners Road spot
+  { nodes: [78, 139], weight: 4.4 }, // Murkwell Lane door -> Sludge Street spot
+  { nodes: [67, 140], weight: 1.76 }, // Peacock Road South door -> Slant Street spot
+  { nodes: [109, 137], weight: 4.17 }, // Four Winds Side Room door -> Snag Alley spot
+  { nodes: [35, 138], weight: 3.13 }, // Waterfront door -> Tanners Road spot
+  { nodes: [79, 139], weight: 7.13 }, // Dawkin Lane door -> Sludge Street spot
+  { nodes: [63, 140], weight: 4.09 }, // Slant Street Cart House door -> Slant Street spot
+  { nodes: [65, 140], weight: 5.63 }, // Dilapidated Warehouse door -> Slant Street spot
+  { nodes: [101, 140], weight: 2.8 }, // Bogg's Antiques door -> Slant Street spot
+  { nodes: [22, 122], weight: 6.5 }, // Twiddle Corner door -> Dusty Nook spot
+  { nodes: [31, 124], weight: 7.46 }, // Jennaler's Wines -> The Frog and Barnacle spot
+  { nodes: [82, 123], weight: 6.42 }, // Henderson's Meat Storehouse door -> Council Office spot
+  { nodes: [55, 123], weight: 13.7 }, // Crenopolis Market Portal Stone door -> Council Office spot
+  { nodes: [56, 123], weight: 12.26 }, // South Player Market door -> Council Office spot
+  { nodes: [58, 123], weight: 11.39 }, // Bert's Gallery door -> Council Office spot
 
   // City Shortcuts are teleports between two rooms (see `cityShortcuts`),
   // unlocked at a Detective milestone; the walk to and from each spot is
   // the edges above, the weight is the teleport itself.
   {
-    nodes: [120, 107],
-    weight: 2,
+    nodes: [120, 137],
+    weight: 6.17,
     detectiveMilestone: 5,
     cityShortcut: "Cellar",
   },
-  { nodes: [48, 80], weight: 2, detectiveMilestone: 6, cityShortcut: "Sewer" },
+  {
+    nodes: [138, 139],
+    weight: 3.67,
+    detectiveMilestone: 6,
+    cityShortcut: "Sewer",
+  },
   {
     nodes: [125, 121],
-    weight: 2,
+    weight: 5.17,
     detectiveMilestone: 7,
     cityShortcut: "Painting",
   },
   {
-    nodes: [67, 122],
-    weight: 2,
+    nodes: [140, 122],
+    weight: 8.1,
     detectiveMilestone: 8,
     cityShortcut: "Manhole",
   },
   {
     nodes: [124, 123],
-    weight: 2,
+    weight: 8.17,
     detectiveMilestone: 9,
     cityShortcut: "Trapdoor",
   },
@@ -648,21 +670,20 @@ export const edges = [
  * profession interlink rewards: teleports between two rooms in Crenopolis,
  * one unlocked per Detective milestone from 5 onwards. Each is wired as an
  * edge in `edges` carrying its name and `detectiveMilestone`; the weight is
- * the ~2s teleport itself — the walk to and from each spot is the
- * surrounding edges.
+ * the teleport itself (game ticks / 600: 3.67s to 8.17s) — the walk to and
+ * from each spot is the surrounding edges.
  * Source: https://brightershoreswiki.org/w/City_Shortcut (the individual
  * variant pages list each shortcut's two locations).
  *
  * Every endpoint is its own graph node at its measured in-game position
- * (nodePositions.js, measured 2026-11-18): the four street endpoints
- * (107, 80, 48, 67) and six spot nodes (120-125), each of the latter
- * connected to its nearest market by a short walk edge in `edges`. The
+ * (nodePositions.js, measured 2026-11-18): ten spot nodes (120-125,
+ * 137-140), each with walk edges in `edges` to the nodes around it. The
  * wiki's map glyphs sit a few units off the real teleport triggers, so
  * the measurements override them.
- *   Cellar     120 (Unicorn Farm) <-> 107 (Snag Alley)
- *   Sewer      48 (Tanners Road) <-> 80 (Sludge Street)
+ *   Cellar     120 (Unicorn Farm) <-> 137 (Snag Alley)
+ *   Sewer      138 (Tanners Road) <-> 139 (Sludge Street)
  *   Painting   125 (Bert's Gallery) <-> 121 (Fillan's Living Room)
- *   Manhole    67 (Slant Street) <-> 122 (Dusty Nook)
+ *   Manhole    140 (Slant Street) <-> 122 (Dusty Nook)
  *   Trapdoor   124 (The Frog and Barnacle) <-> 123 (Council Office)
  */
 export const cityShortcuts = [
@@ -671,15 +692,15 @@ export const cityShortcuts = [
     milestone: 5,
     endpoints: [
       { node: 120, room: "Unicorn Farm" },
-      { node: 107, room: "Snag Alley" },
+      { node: 137, room: "Snag Alley" },
     ],
   },
   {
     name: "Sewer",
     milestone: 6,
     endpoints: [
-      { node: 48, room: "Tanners Road" },
-      { node: 80, room: "Sludge Street" },
+      { node: 138, room: "Tanners Road" },
+      { node: 139, room: "Sludge Street" },
     ],
   },
   {
@@ -694,7 +715,7 @@ export const cityShortcuts = [
     name: "Manhole",
     milestone: 8,
     endpoints: [
-      { node: 67, room: "Slant Street" },
+      { node: 140, room: "Slant Street" },
       { node: 122, room: "Dusty Nook" },
     ],
   },
@@ -733,7 +754,7 @@ export const crimeDens = [
     name: "Counterfeiters",
     milestone: 1,
     level: 33,
-    rooms: ["Dilapidated Warehouse", "Slant Street Cart House"],
+    rooms: ["Slant Street Cart House", "Dilapidated Warehouse"],
     connects: ["West Player Market", "Slant Street"],
   },
   {
@@ -757,7 +778,7 @@ export const crimeDens = [
     name: "Gangsters",
     milestone: 4,
     level: 33,
-    rooms: ["Gillad's House", "The Quill Club"],
+    rooms: ["The Quill Club", "Gillad's House"],
     connects: ["Peacock Road Central", "Dawkin Court"],
   },
 ];
@@ -769,19 +790,19 @@ export const crimeDens = [
  * map draws the walk line through the room and marks the den dot there.
  *
  * Which passage goes through which room follows the order of each den's
- * `rooms` array — not yet confirmed in-game; re-check against the game map.
+ * `rooms` array, checked against the wiki room outlines (doorways and walk times).
  */
 export const denRooms = [
   { node: 126, den: "SMUGGLERS", room: "Geld Family Residence" },
   { node: 127, den: "SMUGGLERS", room: "Geld Family Logistics" },
-  { node: 128, den: "COUNTERFEITERS", room: "Dilapidated Warehouse" },
-  { node: 129, den: "COUNTERFEITERS", room: "Slant Street Cart House" },
+  { node: 128, den: "COUNTERFEITERS", room: "Slant Street Cart House" },
+  { node: 129, den: "COUNTERFEITERS", room: "Dilapidated Warehouse" },
   { node: 130, den: "BURGLARS", room: "Market Chambers" },
   { node: 131, den: "BURGLARS", room: "Oscen's Warehouse" },
   { node: 132, den: "MUGGERS", room: "Four Winds Backroom" },
   { node: 133, den: "MUGGERS", room: "Four Winds Side Room" },
-  { node: 134, den: "GANGSTERS", room: "Gillad's House" },
-  { node: 135, den: "GANGSTERS", room: "The Quill Club" },
+  { node: 134, den: "GANGSTERS", room: "The Quill Club" },
+  { node: 135, den: "GANGSTERS", room: "Gillad's House" },
 ];
 
 /**

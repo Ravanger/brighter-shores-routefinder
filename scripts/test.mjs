@@ -8,7 +8,10 @@ import { basename, join } from "node:path";
 // are bundled to plain JS with esbuild (already present via vite) first.
 // The bundles are CommonJS: react-dom/server requires Node builtins in a
 // way the ESM bundle shim cannot handle.
-const esbuild = "node_modules/.bin/esbuild";
+// Windows can't exec the .bin esbuild shim; run its JS launcher through node.
+const esbuild = "node_modules/esbuild/bin/esbuild";
+const esbuildCommand =
+  process.platform === "win32" ? [process.execPath, esbuild] : [esbuild];
 
 if (!existsSync(esbuild)) {
   console.error("esbuild not found — run npm install first.");
@@ -25,8 +28,9 @@ const tmp = mkdtempSync(join(tmpdir(), "routefinder-test-"));
 
 try {
   execFileSync(
-    esbuild,
+    esbuildCommand[0],
     [
+      ...esbuildCommand.slice(1),
       ...jsxTests,
       "--bundle",
       "--platform=node",
@@ -46,6 +50,7 @@ try {
       "--test",
       "src/algorithm/cityShortcuts.test.mjs",
       "src/algorithm/crimeDens.test.mjs",
+      "src/algorithm/edgePaths.test.mjs",
       "src/algorithm/nodePositions.test.mjs",
       "src/algorithm/pathfinder.test.mjs",
       "src/algorithm/questRooms.test.mjs",
@@ -53,6 +58,7 @@ try {
       "src/algorithm/wikiMap.test.mjs",
       "src/hooks/useSettings.test.mjs",
       "scripts/generateNodePositions.test.mjs",
+      "scripts/generateEdgePaths.test.mjs",
       // esbuild names the bundles <entry>.js for --format=cjs.
       ...jsxTests.map((file) => join(tmp, `${basename(file, ".mjs")}.js`)),
     ],

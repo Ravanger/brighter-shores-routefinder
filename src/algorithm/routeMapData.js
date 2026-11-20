@@ -1,4 +1,5 @@
 import GPS from "./gps.js";
+import { edgePaths } from "./edgePaths.js";
 import { bountyBoard, crimeDens, denRooms, edges, markets, portals } from "./nodes.js";
 import { nodePositions } from "./nodePositions.js";
 import { wikiToLatLng } from "./wikiMap.js";
@@ -267,6 +268,8 @@ export const assignStopNumbers = (actions, positions = nodePositions) => {
  * @param board The bounty board the route starts at ({@link bountyBoard} or
  *   {@link expressBountyBoard})
  * @param enabledCrimeDens Keys from {@link crimeDens} the player has unlocked and can clear (see {@link getEnabledCrimeDens})
+ * @param paths Walk edge "a-b" -> the street points between a and b
+ *   (defaults to {@link edgePaths})
  * @returns {{
  *   segments: {points: number[][], kind: string, name: string | null}[],
  *   jumps: {kind: string, name: string, x: number, y: number}[],
@@ -285,6 +288,7 @@ export const buildRouteGeometry = (
   positions = nodePositions,
   board = bountyBoard,
   enabledCrimeDens = [],
+  paths = edgePaths,
 ) => {
   const marketByName = new Map(
     Object.values(markets).map((market) => [market.name, market.node]),
@@ -413,6 +417,16 @@ export const buildRouteGeometry = (
     const position = positions[node];
     if (!position) {
       continue;
+    }
+    if (pendingKind === null && i > 0 && positions[fullPath[i - 1]]) {
+      const from = fullPath[i - 1];
+      // A directed edge stores its path in one direction only.
+      const street =
+        paths[`${from}-${node}`] ??
+        [...(paths[`${node}-${from}`] ?? [])].reverse();
+      for (const [x, y] of street) {
+        positioned.push({ node: null, x, y, kind: "walk", name: null });
+      }
     }
     const denRoom = denRoomByNode.get(node);
     if (denRoom) {

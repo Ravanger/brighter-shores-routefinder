@@ -3,8 +3,17 @@ import assert from "node:assert/strict";
 import GPS from "./gps.js";
 import pathfinder from "./pathfinder.js";
 import { buildRouteGeometry } from "./routeMapData.js";
-import { cityShortcuts, edges } from "./nodes.js";
+import { cityShortcuts, crimeDens, edges } from "./nodes.js";
 import { nodePositions } from "./nodePositions.js";
+
+// Teleport times in seconds (game ticks / 600).
+const TELEPORT_SECONDS = {
+  Cellar: 6.17,
+  Sewer: 3.67,
+  Painting: 5.17,
+  Manhole: 8.1,
+  Trapdoor: 8.17,
+};
 
 test("cityShortcut edges match the cityShortcuts table", () => {
   const shortcutEdges = edges.filter((edge) => edge.cityShortcut);
@@ -13,8 +22,8 @@ test("cityShortcut edges match the cityShortcuts table", () => {
     const edge = shortcutEdges.find((e) => e.cityShortcut === shortcut.name);
     assert.ok(edge, `no edge for ${shortcut.name}`);
     assert.equal(edge.detectiveMilestone, shortcut.milestone);
-    // The weight is the ~2s teleport itself.
-    assert.equal(edge.weight, 2);
+    // The weight is the teleport itself.
+    assert.equal(edge.weight, TELEPORT_SECONDS[shortcut.name]);
     // The table's endpoint nodes are the edge's nodes, in edge order.
     assert.deepEqual(
       shortcut.endpoints.map((endpoint) => endpoint.node),
@@ -61,11 +70,15 @@ test("pathfinder labels a shortcut crossing as its own travel step", () => {
   assert.ok(types.indexOf("shortcut") > types.indexOf("buy"));
   assert.ok(types.indexOf("shortcut") < types.indexOf("sell"));
 
-  // Its distance is the previous step's plus the 2s teleport. Tolerance: a
+  // Its distance is the previous step's plus the teleport. Tolerance: a
   // difference of accumulated floating-point sums does not always round
   // identically to the direct sum.
   const buy = unlocked.actions.find((action) => action.type === "buy");
-  assert.ok(Math.abs(shortcuts[0].distance - buy.distance - 2) < 1e-9);
+  assert.ok(
+    Math.abs(
+      shortcuts[0].distance - buy.distance - TELEPORT_SECONDS.Cellar,
+    ) < 1e-9,
+  );
 
   const locked = pathfinder.findBestBounties(["MEAT_WRAP"], [], 4, false, true);
   assert.equal(
@@ -76,7 +89,7 @@ test("pathfinder labels a shortcut crossing as its own travel step", () => {
 });
 
 // A route from Victor T Cyclops (8) to the Vase Stall (85): at milestone 5
-// the leg 120 -> 107 is the Cellar teleport, drawn as a shortcut segment
+// the leg 120 -> 137 is the Cellar teleport, drawn as a shortcut segment
 // between the two endpoints' positions; at milestone 4 it is not.
 test("shortcut legs are drawn as shortcut segments on the route map", () => {
   const actions = [
@@ -84,7 +97,7 @@ test("shortcut legs are drawn as shortcut segments on the route map", () => {
     { type: "sell", item: "X", location: "Vase Stall" },
   ];
   const from = nodePositions[120]; // Cellar spot in Unicorn Farm
-  const to = nodePositions[107]; // Cellar spot in Snag Alley
+  const to = nodePositions[137]; // Cellar spot in Snag Alley
 
   const hasShortcutSegment = (geometry) =>
     geometry.segments.some(
@@ -118,8 +131,8 @@ test("shortcut legs are drawn as shortcut segments on the route map", () => {
     {
       kind: "shortcut",
       name: "Cellar",
-      x: nodePositions[107][0],
-      y: nodePositions[107][1],
+      x: nodePositions[137][0],
+      y: nodePositions[137][1],
     },
   ]);
 });
@@ -136,7 +149,25 @@ test("a crossing route connects to and from the teleport spots", () => {
     { type: "sell", item: "X", location: "Greengrocers" },
   ];
 
-  const unlocked = buildRouteGeometry(actions, 5, false, false);
+  // Only the stops, portal stones and Cellar spots, and no street paths:
+  // the waypoints between them are left out so the expected segments stay
+  // short.
+  const positions = Object.fromEntries(
+    [8, 21, 53, 54, 84, 103, 120, 137].map((node) => [
+      node,
+      nodePositions[node],
+    ]),
+  );
+  const unlocked = buildRouteGeometry(
+    actions,
+    5,
+    false,
+    false,
+    positions,
+    undefined,
+    [],
+    {},
+  );
   assert.deepEqual(unlocked.segments, [
     {
       points: [
@@ -157,12 +188,12 @@ test("a crossing route connects to and from the teleport spots", () => {
       name: null,
     },
     {
-      points: [nodePositions[120], nodePositions[107]],
+      points: [nodePositions[120], nodePositions[137]],
       kind: "shortcut",
       name: "Cellar",
     },
     {
-      points: [nodePositions[107], nodePositions[21]],
+      points: [nodePositions[137], nodePositions[21]],
       kind: "walk",
       name: null,
     },
@@ -180,8 +211,8 @@ test("a crossing route connects to and from the teleport spots", () => {
     {
       kind: "shortcut",
       name: "Cellar",
-      x: nodePositions[107][0],
-      y: nodePositions[107][1],
+      x: nodePositions[137][0],
+      y: nodePositions[137][1],
     },
   ]);
 
@@ -191,5 +222,31 @@ test("a crossing route connects to and from the teleport spots", () => {
       segment.points.some(([x, y]) => x === point[0] && y === point[1]),
     );
   assert.ok(!touches(locked.segments, nodePositions[120]));
-  assert.ok(!touches(locked.segments, nodePositions[107]));
+  assert.ok(!touches(locked.segments, nodePositions[137]));
+});
+
+test("no ordinary walk passes through a shortcut spot", () => {
+  const spots = new Set(
+    cityShortcuts.flatMap((shortcut) =>
+      shortcut.endpoints.map((endpoint) => endpoint.node),
+    ),
+  );
+  const nodes = [...new Set(edges.flatMap((edge) => edge.nodes))].filter(
+    (node) => !spots.has(node),
+  );
+  const gps = new GPS(9, true, crimeDens.map((den) => den.key));
+  for (const from of nodes) {
+    for (const to of nodes) {
+      if (from === to) {
+        continue;
+      }
+      const { path } = gps.distance(from, to);
+      for (let i = 1; i < path.length - 1; ++i) {
+        assert.ok(
+          !spots.has(path[i]) || spots.has(path[i - 1]) || spots.has(path[i + 1]),
+          `${from} -> ${to} walks through spot ${path[i]}: ${path.join(",")}`,
+        );
+      }
+    }
+  }
 });

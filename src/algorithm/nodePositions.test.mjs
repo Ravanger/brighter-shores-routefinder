@@ -5,6 +5,7 @@ import {
   bountyBoard,
   crimeDens,
   denRooms,
+  edges,
   expressBountyBoard,
   markets,
   portals,
@@ -47,12 +48,14 @@ test("pins a sample of wiki positions", () => {
   assert.deepEqual(nodePositions[118], [327, 63]); // Ignatius, Twiddle Corner
 });
 
-// Measured in-game (2026-11-18), they override the wiki's map glyphs: pin
-// a few so a regeneration cannot silently clobber the measurements.
-test("pins the measured City Shortcut spots", () => {
+// City Shortcut teleport spots override the wiki's map glyphs (nine measured
+// in-game 2026-11-18, Sludge Street from tile data): pin a few so a
+// regeneration cannot silently clobber them.
+test("pins the City Shortcut teleport spots", () => {
   assert.deepEqual(nodePositions[120], [245, 37]); // Unicorn Farm (Cellar)
-  assert.deepEqual(nodePositions[107], [365, 58]); // Snag Alley (Cellar)
+  assert.deepEqual(nodePositions[137], [365, 58]); // Snag Alley (Cellar)
   assert.deepEqual(nodePositions[123], [440, 23]); // Council Office (Trapdoor)
+  assert.deepEqual(nodePositions[139], [346.5, 7]); // Sludge Street (Sewer), tile data
 });
 
 // Den room nodes: every room in denRooms has a finite position (its wiki
@@ -82,5 +85,21 @@ test("every quest room node has a finite position", () => {
       Number.isFinite(position[0]) && Number.isFinite(position[1]),
       `${room} position is not finite`,
     );
+  }
+});
+
+// An unpositioned node is skipped by the route map, so a walk through it is
+// drawn as a straight line across buildings instead of along the street.
+test("every graph node has a finite position", () => {
+  for (const edge of edges) {
+    for (const node of edge.nodes) {
+      const position = nodePositions[node];
+      assert.ok(
+        Array.isArray(position) &&
+          Number.isFinite(position[0]) &&
+          Number.isFinite(position[1]),
+        `node ${node} has no position`,
+      );
+    }
   }
 });

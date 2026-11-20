@@ -8,7 +8,8 @@
 // src/algorithm/nodes.js): their positions are the wiki polygon centroids,
 // used for routing through raided dens and for the route map's debug
 // overlay. So are the quest rooms (see `questRooms`), whose passages open
-// when a quest is complete.
+// when a quest is complete. Every other graph node is a waypoint at a
+// doorway (WAYPOINT_DOORS), so the route map draws walks along the streets.
 //
 // Usage: node scripts/generateNodePositions.mjs
 //
@@ -29,7 +30,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { bountyBoard, crimeDens, denRooms, expressBountyBoard, markets, portals, questRooms } from "../src/algorithm/nodes.js";
 
-const GADGET_URL =
+export const GADGET_URL =
   "https://brightershoreswiki.org/w/MediaWiki:Gadget-leaflet-wiki.js?action=raw";
 
 // Market name (as in src/algorithm/nodes.js) -> where it lives in the
@@ -125,7 +126,8 @@ const SHORTCUT_SPOTS = [
 const MEASURED_SPOTS = [
   { node: 138, shortcut: "Sewer", room: "Tanners Road", position: [412, 97] },
   { node: 140, shortcut: "Manhole", room: "Slant Street", position: [403, 20] },
-  { node: 139, shortcut: "Sewer", room: "Sludge Street", position: [346, 3] },
+  // The in-game reading [346, 3] was 4u off; brighteratlas.com tile data.
+  { node: 139, shortcut: "Sewer", room: "Sludge Street", position: [346.5, 7] },
   { node: 137, shortcut: "Cellar", room: "Snag Alley", position: [365, 58] },
   { node: 120, shortcut: "Cellar", room: "Unicorn Farm", position: [245, 37] },
   { node: 121, shortcut: "Painting", room: "Fillan's Living Room", position: [387, -29] },
@@ -134,6 +136,99 @@ const MEASURED_SPOTS = [
   { node: 124, shortcut: "Trapdoor", room: "The Frog and Barnacle", position: [364, 97] },
   { node: 125, shortcut: "Painting", room: "Bert's Gallery", position: [457, 50] },
 ];
+// Graph waypoints are doorways: two wiki room outlines one unit apart for a
+// short stretch. Each node is matched to its doorway by its edges (both ends
+// must touch a common room, times fit ~2.62 units/s); see the README.
+const WAYPOINT_DOORS = [
+  { node: 1, door: ["Crenopolis Outskirts Portal Stone", "Cyclops East Pass"], position: [290, 57.5] },
+  { node: 2, door: ["Stony Ravine", "Cyclops East Pass"], position: [286.5, 53] },
+  { node: 3, door: ["Stony Gorge", "Stony Ravine"], position: [279, 57.5] },
+  { node: 4, door: ["Stony Canyon", "Stony Gorge"], position: [265.5, 61] },
+  { node: 5, door: ["Cyclops Canyon", "Stony Canyon"], position: [252.5, 61] },
+  { node: 6, door: ["Cyclops Canyon", "Unicorn Farm"], position: [249, 57.5] },
+  { node: 7, door: ["Unicorn Farm", "Cyclops Store Cave"], position: [255.5, 51] },
+  { node: 9, door: ["Cyclops East Pass", "Road to Crenopolis"], position: [294, 48.5] },
+  { node: 10, door: ["Road to Crenopolis", "Rockbird Clearing"], position: [296.5, 40.5] },
+  { node: 11, door: ["Fortunehold Meadow", "Rockbird Clearing"], position: [296, 21.5] },
+  { node: 12, door: ["Fortunehold Meadow", "Fortunehold Farm"], position: [301.5, 4.5] },
+  { node: 14, door: ["Road to Crenopolis", "West Gate"], position: [300.5, 45] },
+  { node: 15, door: ["West Gate", "Lord's Road West"], position: [314.5, 45] },
+  { node: 17, door: ["Cobble Corner", "Lord's Road West"], position: [320.5, 51.5] },
+  { node: 19, door: ["Cobble Corner", "Twiddle Corner"], position: [325.5, 61.5] },
+  { node: 20, door: ["Twiddle Corner", "Greengrocers"], position: [339.5, 57.5] },
+  { node: 22, door: ["Dusty Alley", "Twiddle Corner"], position: [338, 65.5] },
+  { node: 23, door: ["Dusty Alley", "Dusty Corner"], position: [338, 74.5] },
+  { node: 24, door: ["Dusty Corner", "Morose Lane West"], position: [343.5, 78] },
+  { node: 25, door: ["Lani's Curiosities", "Morose Lane West"], position: [356, 80.5] },
+  { node: 27, door: ["Morose Lane East", "Morose Lane West"], position: [360.5, 78] },
+  { node: 28, door: ["Morose Lane East", "Thimble Lane"], position: [370.5, 78] },
+  { node: 29, door: ["Geld Family Residence", "Thimble Lane"], position: [375, 81.5] },
+  { node: 30, door: ["Waterfront Market", "Geld Family Residence"], position: [375, 88.5] },
+  { node: 32, door: ["Waterfront Market", "Geld Family Logistics"], position: [382, 89.5] },
+  { node: 33, door: ["Geld Family Logistics", "Thimble Lane"], position: [382, 80.5] },
+  { node: 34, door: ["Waterfront Market", "Waterfront"], position: [388.5, 95] },
+  { node: 35, door: ["Waterfront", "Tanners Road"], position: [404.5, 95] },
+  { node: 37, door: ["Bobbin Road South", "Waterfront"], position: [395.5, 89.5] },
+  { node: 39, door: ["Bobbin Road South", "Bobbin Road North"], position: [395, 65.5] },
+  { node: 40, door: ["Thadwick Square", "Bobbin Road North"], position: [395, 53.5] },
+  { node: 42, door: ["Thadwick Square", "Goose Inn Bar"], position: [387, 53.5] },
+  { node: 43, door: ["Goose Inn Kitchen", "Goose Inn Bar"], position: [387, 66.5] },
+  { node: 45, door: ["Leatherworks", "Bobbin Road North"], position: [399.5, 58] },
+  { node: 46, door: ["Leatherworks", "Ratmore Rise"], position: [407.5, 59.5] },
+  { node: 47, door: ["Ratmore Road", "Ratmore Rise"], position: [416.5, 75] },
+  { node: 48, door: ["Ratmore Road", "Tanners Road"], position: [419, 89.5] },
+  { node: 49, door: ["Ratmore Road", "Market Chambers"], position: [425.5, 70] },
+  { node: 50, door: ["Market Chambers", "South Player Market"], position: [431, 64.5] },
+  { node: 51, door: ["South Player Market", "Oscen's Warehouse"], position: [423.5, 59.5] },
+  { node: 52, door: ["Ratmore Road", "Oscen's Warehouse"], position: [421, 66.5] },
+  { node: 55, door: ["Crenopolis Market Portal Stone", "East Player Market"], position: [443.5, 56.5] },
+  { node: 56, door: ["South Player Market", "East Player Market"], position: [437.5, 51.5] },
+  { node: 58, door: ["East Player Market", "Bert's Gallery"], position: [448.5, 48] },
+  { node: 60, door: ["West Player Market", "Outer Market"], position: [414.5, 45] },
+  { node: 62, door: ["Slant Street Cart House", "West Player Market"], position: [416.5, 36.5] },
+  { node: 63, door: ["Slant Street Cart House", "Slant Street"], position: [405.5, 30.5] },
+  { node: 64, door: ["Dilapidated Warehouse", "West Player Market"], position: [420.5, 30.5] },
+  { node: 65, door: ["Dilapidated Warehouse", "Slant Street"], position: [415.5, 26] },
+  { node: 67, door: ["Peacock Road South", "Slant Street"], position: [399.5, 23] },
+  { node: 68, door: ["Peacock Road South", "Peacock Road Central"], position: [394, 18.5] },
+  { node: 70, door: ["Peacock Road North", "Peacock Road Central"], position: [394, -2.5] },
+  { node: 72, door: ["Hopton Corner", "Lord's Road West"], position: [329, 39.5] },
+  { node: 73, door: ["Hopton Corner", "Rat Alley"], position: [336, 30.5] },
+  { node: 74, door: ["Murkwell Court", "Rat Alley"], position: [336, 18.5] },
+  { node: 75, door: ["Murkwell Court", "Meggrit's Market"], position: [331.5, 14] },
+  { node: 78, door: ["Murkwell Court", "Murkwell Lane"], position: [343.5, 14] },
+  { node: 79, door: ["Dawkin Lane", "Murkwell Lane"], position: [358.5, 14.5] },
+  { node: 80, door: ["Dawkin Lane", "Soap Shop"], position: [362.5, 10.5] },
+  { node: 82, door: ["East Player Market", "Henderson's Meat Storehouse"], position: [448.5, 35] },
+  { node: 87, door: ["Lord's Road Central", "Lord's Road West"], position: [334.5, 45] },
+  { node: 88, door: ["Lord's Road Central", "Lord's Road East"], position: [354.5, 45] },
+  { node: 89, door: ["Lord's Road New", "Lord's Road East"], position: [371.5, 45] },
+  { node: 90, door: ["Lord's Road New", "Thadwick Square"], position: [382.5, 45] },
+  { node: 91, door: ["Peacock Road South", "Thadwick Square"], position: [394, 36.5] },
+  { node: 92, door: ["Greengrocers", "Lord's Road Central"], position: [340, 49.5] },
+  { node: 94, door: ["Bobbin Road South", "Thimble Lane"], position: [390.5, 78] },
+  { node: 95, door: ["Thadwick Square", "Outer Market"], position: [399.5, 45] },
+  { node: 96, door: ["North Player Market", "East Player Market"], position: [437.5, 33.5] },
+  { node: 97, door: ["North Player Market", "West Player Market"], position: [425.5, 33.5] },
+  { node: 98, door: ["North Player Market", "Merchants' Guild"], position: [434, 36.5] },
+  { node: 99, door: ["West Player Market", "Merchants' Guild"], position: [425.5, 42.5] },
+  { node: 100, door: ["South Player Market", "Merchants' Guild"], position: [434, 48.5] },
+  { node: 101, door: ["Slant Street", "Bogg's Antiques"], position: [406.5, 17.5] },
+  { node: 105, door: ["Meggrit's Market", "Abandoned Alleyway"], position: [318.5, 12.5] },
+  { node: 106, door: ["Fortunehold Farm", "Abandoned Alleyway"], position: [309.5, 7.5] },
+  { node: 107, door: ["Four Winds Backroom", "Snag Alley"], position: [358.5, 58] },
+  { node: 108, door: ["Four Winds Backroom", "Four Winds Bar"], position: [355.5, 64.5] },
+  { node: 109, door: ["Four Winds Side Room", "Snag Alley"], position: [363.5, 68.5] },
+  { node: 110, door: ["Four Winds Bar", "Four Winds Side Room"], position: [360.5, 71] },
+  { node: 111, door: ["Lord's Road East", "Snag Alley"], position: [364, 49.5] },
+  { node: 112, door: ["Morose Lane West", "Four Winds Bar"], position: [356, 74.5] },
+  { node: 113, door: ["The Quill Club", "Peacock Road Central"], position: [389.5, 9.5] },
+  { node: 114, door: ["Dawkin Court", "The Quill Club"], position: [382.5, 9.5] },
+  { node: 115, door: ["Dawkin Court", "Gillad's House"], position: [378, 4.5] },
+  { node: 116, door: ["Gillad's House", "Peacock Road Central"], position: [389.5, 1.5] },
+  { node: 117, door: ["Dawkin Lane", "Dawkin Court"], position: [371.5, 15] },
+];
+
 
 // The marker segments are stored in the map image's own coordinate space
 // (axes swapped relative to in-game coords). This affine transform to wiki
@@ -572,6 +667,12 @@ const main = async () => {
   // from the wiki's map glyphs.
   const entries = [
     ...marketEntries.entries,
+    ...WAYPOINT_DOORS.map((waypoint) => ({
+      name: waypoint.door.join(" / "),
+      node: waypoint.node,
+      position: waypoint.position,
+      note: "doorway (wiki room outlines)",
+    })),
     ...MEASURED_SPOTS.map((spot) => ({
       name: spot.room,
       node: spot.node,
@@ -626,8 +727,8 @@ const main = async () => {
 // Coordinates are wiki in-game [x, y], rounded to 2 decimals.
 // A position is the room centre (polygon centroid) unless the comment says
 // it is a shop marker (the shopkeeper NPC's marker inside the room), a
-// crime den room centre, a quest room centre, or a City Shortcut spot
-// (measured in-game; overrides the wiki's map glyph).
+// crime den room centre, a quest room centre, a City Shortcut spot
+// (measured in-game; overrides the wiki's map glyph), or a doorway.
 export const nodePositions = {
 ${entries.map(formatEntry).join("\n")}
 };

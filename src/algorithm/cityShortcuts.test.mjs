@@ -6,6 +6,15 @@ import { buildRouteGeometry } from "./routeMapData.js";
 import { cityShortcuts, edges } from "./nodes.js";
 import { nodePositions } from "./nodePositions.js";
 
+// Teleport times in seconds (game ticks / 600, brighteratlas.com).
+const TELEPORT_SECONDS = {
+  Cellar: 6.17,
+  Sewer: 3.67,
+  Painting: 5.17,
+  Manhole: 8.1,
+  Trapdoor: 8.17,
+};
+
 test("cityShortcut edges match the cityShortcuts table", () => {
   const shortcutEdges = edges.filter((edge) => edge.cityShortcut);
   assert.equal(shortcutEdges.length, cityShortcuts.length);
@@ -13,8 +22,8 @@ test("cityShortcut edges match the cityShortcuts table", () => {
     const edge = shortcutEdges.find((e) => e.cityShortcut === shortcut.name);
     assert.ok(edge, `no edge for ${shortcut.name}`);
     assert.equal(edge.detectiveMilestone, shortcut.milestone);
-    // The weight is the ~2s teleport itself.
-    assert.equal(edge.weight, 2);
+    // The weight is the teleport itself.
+    assert.equal(edge.weight, TELEPORT_SECONDS[shortcut.name]);
     // The table's endpoint nodes are the edge's nodes, in edge order.
     assert.deepEqual(
       shortcut.endpoints.map((endpoint) => endpoint.node),
@@ -61,11 +70,15 @@ test("pathfinder labels a shortcut crossing as its own travel step", () => {
   assert.ok(types.indexOf("shortcut") > types.indexOf("buy"));
   assert.ok(types.indexOf("shortcut") < types.indexOf("sell"));
 
-  // Its distance is the previous step's plus the 2s teleport. Tolerance: a
+  // Its distance is the previous step's plus the teleport. Tolerance: a
   // difference of accumulated floating-point sums does not always round
   // identically to the direct sum.
   const buy = unlocked.actions.find((action) => action.type === "buy");
-  assert.ok(Math.abs(shortcuts[0].distance - buy.distance - 2) < 1e-9);
+  assert.ok(
+    Math.abs(
+      shortcuts[0].distance - buy.distance - TELEPORT_SECONDS.Cellar,
+    ) < 1e-9,
+  );
 
   const locked = pathfinder.findBestBounties(["MEAT_WRAP"], [], 4, false, true);
   assert.equal(
@@ -136,7 +149,25 @@ test("a crossing route connects to and from the teleport spots", () => {
     { type: "sell", item: "X", location: "Greengrocers" },
   ];
 
-  const unlocked = buildRouteGeometry(actions, 5, false, false);
+  // Only the stops, portal stones and Cellar spots, and no street paths:
+  // the waypoints between them are left out so the expected segments stay
+  // short.
+  const positions = Object.fromEntries(
+    [8, 21, 53, 54, 84, 103, 120, 137].map((node) => [
+      node,
+      nodePositions[node],
+    ]),
+  );
+  const unlocked = buildRouteGeometry(
+    actions,
+    5,
+    false,
+    false,
+    positions,
+    undefined,
+    [],
+    {},
+  );
   assert.deepEqual(unlocked.segments, [
     {
       points: [

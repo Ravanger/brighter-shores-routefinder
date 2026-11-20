@@ -106,14 +106,14 @@ test("each den room's half-edges sum to the measured passage time", () => {
   const measured = new Map([
     [126, 5], // Geld Family Residence
     [127, 4.07], // Geld Family Logistics
-    [128, 6.62], // Dilapidated Warehouse
-    [129, 7], // Slant Street Cart House
+    [128, 6.62], // Slant Street Cart House
+    [129, 7], // Dilapidated Warehouse
     [130, 5], // Market Chambers
     [131, 4.43], // Oscen's Warehouse
     [132, 3.19], // Four Winds Backroom
     [133, 2.57], // Four Winds Side Room
-    [134, 2.97], // Gillad's House
-    [135, 6.1], // The Quill Club
+    [134, 2.97], // The Quill Club
+    [135, 6.1], // Gillad's House
   ]);
 
   for (const { node, den, room } of denRooms) {

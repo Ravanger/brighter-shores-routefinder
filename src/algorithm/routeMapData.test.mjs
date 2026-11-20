@@ -8,6 +8,7 @@ import {
   formatStopNumbers,
 } from "./routeMapData.js";
 import { expressBountyBoard } from "./nodes.js";
+import { nodePositions } from "./nodePositions.js";
 
 // Buy at the Toy Stall, sell at the Cheese Shop, then return to the board.
 // The teleport action in the middle is an intermediate step, not a stop.
@@ -18,8 +19,20 @@ const sampleActions = [
   { type: "Return", location: "Guild Bounty Board", distance: 60 },
 ];
 
+// Only the sample route's stops, boards and portal stones: the waypoints
+// between them are left out so the expected segments stay short.
+const stopPositions = Object.fromEntries(
+  [36, 53, 54, 59, 84, 103].map((node) => [node, nodePositions[node]]),
+);
+
 test("builds numbered stops, the start marker and solid/dashed segments", () => {
-  const geometry = buildRouteGeometry(sampleActions, 0, false, true);
+  const geometry = buildRouteGeometry(
+    sampleActions,
+    0,
+    false,
+    true,
+    stopPositions,
+  );
 
   assert.ok(geometry);
   assert.deepEqual(geometry.start, {
@@ -69,7 +82,7 @@ test("starts at the Express Bounty Board when it is the board", () => {
     0,
     false,
     true,
-    undefined,
+    stopPositions,
     expressBountyBoard,
   );
 
@@ -105,7 +118,12 @@ test("starts at the Express Bounty Board when it is the board", () => {
     { kind: "teleport", name: "Crenopolis Market", x: 443, y: 61 },
   ]);
 
-  const route = buildRouteSteps(geometry, sampleActions, true);
+  const route = buildRouteSteps(
+    geometry,
+    sampleActions,
+    true,
+    stopPositions,
+  );
   const ret = route.steps.find((step) => step.type === "Return");
   assert.deepEqual(ret, {
     number: null,
@@ -185,7 +203,13 @@ test("den passages walked through are marked as dots on the map", () => {
 });
 
 test("flattens segments to ordered points, carrying kind and name", () => {
-  const geometry = buildRouteGeometry(sampleActions, 0, false, true);
+  const geometry = buildRouteGeometry(
+    sampleActions,
+    0,
+    false,
+    true,
+    stopPositions,
+  );
 
   assert.deepEqual(flattenRoutePoints(geometry.segments), [
     { x: 436, y: 42, kind: "walk", name: null },
@@ -220,8 +244,19 @@ test("flattenRoutePoints skips duplicate join points and empty segments", () => 
 });
 
 test("builds steps, places, route points and bounds for the map", () => {
-  const geometry = buildRouteGeometry(sampleActions, 0, false, true);
-  const route = buildRouteSteps(geometry, sampleActions, true);
+  const geometry = buildRouteGeometry(
+    sampleActions,
+    0,
+    false,
+    true,
+    stopPositions,
+  );
+  const route = buildRouteSteps(
+    geometry,
+    sampleActions,
+    true,
+    stopPositions,
+  );
 
   assert.ok(route);
   assert.deepEqual(route.steps, [
@@ -339,8 +374,19 @@ test("teleport, den and Return steps get no number and consume none", () => {
 });
 
 test("list numbering matches the map steps for the same actions", () => {
-  const geometry = buildRouteGeometry(sampleActions, 0, false, true);
-  const route = buildRouteSteps(geometry, sampleActions, true);
+  const geometry = buildRouteGeometry(
+    sampleActions,
+    0,
+    false,
+    true,
+    stopPositions,
+  );
+  const route = buildRouteSteps(
+    geometry,
+    sampleActions,
+    true,
+    stopPositions,
+  );
   const mapNumbers = route.steps
     .filter((step) => step.number !== null)
     .map((step) => step.number);
@@ -369,4 +415,52 @@ test("actions at unknown or unpositioned locations get no number and consume non
     geometry.stops.map((stop) => stop.number),
     [1],
   );
+});
+
+// The reported bug: Hermar's -> Soap Shop -> Fortunehold Farm walks through
+// Murkwell Lane and Dawkin Lane twice. With every waypoint positioned, both
+// legs follow the doorways and never touch the Sewer spot in Sludge Street.
+test("walks follow the doorways and never bend to an unused shortcut spot", () => {
+  const actions = [
+    { type: "buy", item: "X", location: "Hermar's Homeware" },
+    { type: "buy", item: "Y", location: "Soap Shop" },
+    { type: "sell", item: "X", location: "Fortunehold Farm" },
+  ];
+  const geometry = buildRouteGeometry(actions, 9, true, false);
+  const points = geometry.segments.flatMap((segment) => segment.points);
+  const touches = (node) =>
+    points.some(
+      ([x, y]) => x === nodePositions[node][0] && y === nodePositions[node][1],
+    );
+  assert.ok(touches(79), "Dawkin Lane / Murkwell Lane door");
+  assert.ok(touches(80), "Dawkin Lane / Soap Shop door");
+  assert.ok(!touches(139), "Sewer spot in Sludge Street");
+  assert.deepEqual(
+    geometry.jumps.filter((jump) => jump.kind === "shortcut"),
+    [],
+  );
+});
+
+// A walk between two positioned nodes runs through the street path stored
+// for their edge, in either direction: 79 -> 80 is on the way from Hermar's
+// to the Soap Shop.
+test("walk legs follow the street path stored for each edge", () => {
+  const actions = [
+    { type: "buy", item: "X", location: "Hermar's Homeware" },
+    { type: "sell", item: "X", location: "Soap Shop" },
+  ];
+  const pointsWith = (paths) =>
+    buildRouteGeometry(actions, 9, true, false, undefined, undefined, [], paths)
+      .segments.flatMap((segment) => segment.points)
+      .map(([x, y]) => `${x},${y}`);
+  const from = nodePositions[79].join(",");
+  const to = nodePositions[80].join(",");
+
+  const forward = pointsWith({ "79-80": [[1, 2], [3, 4]] });
+  const start = forward.indexOf(from);
+  assert.deepEqual(forward.slice(start, start + 4), [from, "1,2", "3,4", to]);
+
+  const reversed = pointsWith({ "80-79": [[1, 2], [3, 4]] });
+  const back = reversed.indexOf(from);
+  assert.deepEqual(reversed.slice(back, back + 4), [from, "3,4", "1,2", to]);
 });

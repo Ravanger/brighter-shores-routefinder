@@ -5,6 +5,7 @@ import {
   bountyBoard,
   crimeDens,
   denRooms,
+  edges,
   expressBountyBoard,
   markets,
   portals,
@@ -82,5 +83,21 @@ test("every quest room node has a finite position", () => {
       Number.isFinite(position[0]) && Number.isFinite(position[1]),
       `${room} position is not finite`,
     );
+  }
+});
+
+// An unpositioned node is skipped by the route map, so a walk through it is
+// drawn as a straight line across buildings instead of along the street.
+test("every graph node has a finite position", () => {
+  for (const edge of edges) {
+    for (const node of edge.nodes) {
+      const position = nodePositions[node];
+      assert.ok(
+        Array.isArray(position) &&
+          Number.isFinite(position[0]) &&
+          Number.isFinite(position[1]),
+        `node ${node} has no position`,
+      );
+    }
   }
 });

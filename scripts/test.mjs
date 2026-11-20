@@ -54,6 +54,7 @@ try {
       "--test",
       "src/algorithm/cityShortcuts.test.mjs",
       "src/algorithm/crimeDens.test.mjs",
+      "src/algorithm/edgePaths.test.mjs",
       "src/algorithm/nodePositions.test.mjs",
       "src/algorithm/pathfinder.test.mjs",
       "src/algorithm/questRooms.test.mjs",
@@ -61,6 +62,7 @@ try {
       "src/algorithm/wikiMap.test.mjs",
       "src/hooks/useSettings.test.mjs",
       "scripts/generateNodePositions.test.mjs",
+      "scripts/generateEdgePaths.test.mjs",
       // esbuild names the bundles <entry>.js for --format=cjs.
       ...jsxTests.map((file) => join(tmp, `${basename(file, ".mjs")}.js`)),
     ],

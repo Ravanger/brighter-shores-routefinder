@@ -16,7 +16,12 @@ import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { cityShortcuts, denRooms, edges, questRooms } from "../src/algorithm/nodes.js";
+import {
+  cityShortcuts,
+  denRooms,
+  edges,
+  questRooms,
+} from "../src/algorithm/nodes.js";
 import { nodePositions } from "../src/algorithm/nodePositions.js";
 import { GADGET_URL, extractGeojsonModules } from "./generateNodePositions.mjs";
 
@@ -233,11 +238,7 @@ export const findWalkPath = (walkable, from, to) => {
   if (!path) {
     return null;
   }
-  const route = [
-    from,
-    ...path.tiles.map(([x, y]) => [x + 0.5, y + 0.5]),
-    to,
-  ];
+  const route = [from, ...path.tiles.map(([x, y]) => [x + 0.5, y + 0.5]), to];
   const points = [route[0]];
   for (let i = 0; i < route.length - 1; ) {
     let j = route.length - 1;
@@ -262,7 +263,11 @@ export const findWalkPath = (walkable, from, to) => {
  *   `paths` is keyed "a-b" in each edge's node order; `report` lists
  *   spot-attached edges whose path time is far from the edge's weight
  */
-export const buildEdgePaths = (rooms, walkEdges = edges, positions = nodePositions) => {
+export const buildEdgePaths = (
+  rooms,
+  walkEdges = edges,
+  positions = nodePositions,
+) => {
   const conditionalRooms = new Map(
     [...denRooms, ...questRooms].map((room) => [room.node, room.room]),
   );
@@ -339,7 +344,9 @@ const main = async (gadgetPath) => {
     process.exit(1);
   }
   if (report.length > 0) {
-    console.warn("Path time far from the edge weight (check the node positions):");
+    console.warn(
+      "Path time far from the edge weight (check the node positions):",
+    );
     for (const line of report) {
       console.warn(`  - ${line}`);
     }

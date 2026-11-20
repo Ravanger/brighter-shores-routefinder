@@ -145,11 +145,11 @@ export const markets = {
   },
   CABBAGE_STALL: {
     name: "Cabbage Stall",
-    node: 118
+    node: 118,
   },
   PEARL_STALL: {
     name: "Pearl Stall",
-    node: 119
+    node: 119,
   },
 };
 
@@ -626,9 +626,9 @@ export const edges = [
   { nodes: [22, 122], weight: 6.5 }, // Twiddle Corner door -> Dusty Nook spot
   { nodes: [31, 124], weight: 7.46 }, // Jennaler's Wines -> The Frog and Barnacle spot
   { nodes: [82, 123], weight: 6.42 }, // Henderson's Meat Storehouse door -> Council Office spot
-    { nodes: [55, 123], weight: 13.7 }, // Crenopolis Market Portal Stone door -> Council Office spot
-    { nodes: [56, 123], weight: 12.26 }, // South Player Market door -> Council Office spot
-    { nodes: [58, 123], weight: 11.39 }, // Bert's Gallery door -> Council Office spot
+  { nodes: [55, 123], weight: 13.7 }, // Crenopolis Market Portal Stone door -> Council Office spot
+  { nodes: [56, 123], weight: 12.26 }, // South Player Market door -> Council Office spot
+  { nodes: [58, 123], weight: 11.39 }, // Bert's Gallery door -> Council Office spot
 
   // City Shortcuts are teleports between two rooms (see `cityShortcuts`),
   // unlocked at a Detective milestone; the walk to and from each spot is
